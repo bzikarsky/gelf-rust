@@ -96,7 +96,7 @@ impl error::Error for CreateBackendError {
 }
 
 impl From<io::Error> for CreateBackendError {
-    fn from(err: io::Error) -> CreateBackendError {
+    fn from(_: io::Error) -> CreateBackendError {
         CreateBackendError("An unhandled IO error occured")
     }
 }
