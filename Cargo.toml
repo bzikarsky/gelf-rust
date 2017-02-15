@@ -1,0 +1,13 @@
+[package]
+name = "gelf"
+version = "0.1.0"
+authors = ["Benjamin Zikarsky <benjamin@zikarsky.de>"]
+
+[dependencies]
+log = "0.3.6"
+chrono = "0.3.0"
+hostname = "0.1.3"
+libc = "0.2.20"
+serde_json = "0.9.6"
+serde = "0.9.7"
+libflate = "0.1.3"
