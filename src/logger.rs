@@ -1,10 +1,9 @@
-use Backend;
-use CreateLoggerError;
-use InitLoggerError;
 use log;
 use hostname;
-use Message;
-use message::WireMessage;
+
+use backends::Backend;
+use message::{Message, WireMessage};
+use errors::{CreateLoggerError, InitLoggerError};
 
 pub struct Logger {
     host: String,
@@ -39,7 +38,7 @@ impl Logger {
     }
 
     pub fn log_message(&self, msg: Message) {
-        let wire_msg = WireMessage::new(msg, &self.host);
+        self.backend.log(WireMessage::new(msg, &self.host));
     }
 }
 

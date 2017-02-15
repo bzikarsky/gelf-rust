@@ -1,24 +1,13 @@
 use std::fmt;
 use std::error;
 use std::io;
+
 use log;
 
 #[derive(Debug)]
 pub enum CreateLoggerError {
     NoHostname,
 }
-
-#[derive(Debug)]
-pub enum InitLoggerError {
-    Create(CreateLoggerError),
-    Install(log::SetLoggerError),
-}
-
-#[derive(Debug)]
-pub struct IllegalAdditionalNameError<'a>(pub &'a str);
-
-#[derive(Debug)]
-pub struct CreateBackendError(pub &'static str);
 
 impl fmt::Display for CreateLoggerError {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
@@ -36,6 +25,12 @@ impl error::Error for CreateLoggerError {
             CreateLoggerError::NoHostname => "No hostname could be determined for the GELF logger",
         }
     }
+}
+
+#[derive(Debug)]
+pub enum InitLoggerError {
+    Create(CreateLoggerError),
+    Install(log::SetLoggerError),
 }
 
 impl fmt::Display for InitLoggerError {
@@ -68,6 +63,8 @@ impl From<CreateLoggerError> for InitLoggerError {
     }
 }
 
+#[derive(Debug)]
+pub struct IllegalAdditionalNameError<'a>(pub &'a str);
 
 impl<'a> fmt::Display for IllegalAdditionalNameError<'a> {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
@@ -83,6 +80,8 @@ impl<'a> error::Error for IllegalAdditionalNameError<'a> {
     }
 }
 
+#[derive(Debug)]
+pub struct CreateBackendError(pub &'static str);
 
 impl fmt::Display for CreateBackendError {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {

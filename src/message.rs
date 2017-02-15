@@ -1,13 +1,14 @@
-use chrono::{DateTime, UTC};
 use std::collections::HashMap;
+
+use chrono::{DateTime, UTC};
 use serde;
 use serde::ser::SerializeMap;
 use serde_json;
+use log;
 
 use errors::IllegalAdditionalNameError;
-use log;
 use util;
-use Level;
+use level::Level;
 
 pub struct Message<'a> {
     short_message: String,
