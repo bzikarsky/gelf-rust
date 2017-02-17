@@ -1,12 +1,16 @@
 [package]
 name = "gelf"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Benjamin Zikarsky <benjamin@zikarsky.de>"]
 description = "A library for logging GELF messages to a Graylog compatible server"
 repository = "https://github.com/bzikarsky/gelf-rust"
 homepage = "https://github.com/bzikarsky/gelf-rust"
 keywords = ["gelf", "log", "graylog", "logging"]
 license = "MIT"
+readme = "README.md"
+
+[badges]
+travis-ci = { repository = "bzikarsky/gelf-rust" }
 
 [dependencies]
 log = "^0.3.6"
