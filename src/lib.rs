@@ -1,6 +1,5 @@
 #![crate_type = "lib"]
 
-extern crate log;
 extern crate chrono;
 extern crate hostname;
 extern crate libc;
@@ -9,6 +8,12 @@ extern crate serde_json;
 extern crate rand;
 extern crate libflate;
 
+#[macro_use]
+extern crate log;
+
+#[macro_use]
+extern crate error_chain;
+
 mod util;
 mod errors;
 mod message;
@@ -16,8 +21,8 @@ mod backends;
 mod logger;
 mod level;
 
-pub use errors::{CreateLoggerError, InitLoggerError, IllegalAdditionalNameError, CreateBackendError};
-pub use backends::{Backend, UdpBackend, CHUNK_SIZE_WAN, CHUNK_SIZE_LAN};
+pub use errors::{Error, ErrorKind, Result};
+pub use backends::{UdpBackend, TcpBackend};
 pub use logger::Logger;
-pub use message::Message;
+pub use message::{Message, MessageCompression, ChunkSize};
 pub use level::Level;

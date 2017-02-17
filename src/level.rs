@@ -1,4 +1,4 @@
-use log::LogLevel;
+use log::{LogLevel, LogLevelFilter};
 
 #[derive(Debug, Clone, Copy)]
 pub enum Level {
@@ -29,5 +29,23 @@ impl Level {
             Level::Notice | Level::Informational => LogLevel::Info,
             Level::Debug => LogLevel::Debug,
         }
+    }
+}
+
+impl Into<LogLevel> for Level {
+    fn into(self) -> LogLevel {
+        self.to_rust()
+    }
+}
+
+impl From<LogLevel> for Level {
+    fn from(level: LogLevel) -> Level {
+        Level::from_rust(&level)
+    }
+}
+
+impl Into<LogLevelFilter> for Level {
+    fn into(self) -> LogLevelFilter {
+        self.to_rust().to_log_level_filter()
     }
 }

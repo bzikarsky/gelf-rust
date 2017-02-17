@@ -1,116 +1,81 @@
 use std::net;
-use std::io;
-use std::io::Read;
-
-use rand;
-use libflate::gzip;
 
 use backends::Backend;
-use message::WireMessage;
-use errors::CreateBackendError;
-
-pub const CHUNK_SIZE_LAN: u16 = 8154;
-pub const CHUNK_SIZE_WAN: u16 = 1420;
-
-static MAGIC_BYTES: &'static [u8; 2] = b"\x1e\x0f";
+use message::{WireMessage, MessageCompression, ChunkSize};
+use errors::{Result, ErrorKind, ResultExt};
 
 pub struct UdpBackend {
     socket: net::UdpSocket,
     destination: net::SocketAddr,
-    chunk_size: u16,
+    chunk_size: ChunkSize,
+    panic_on_error: bool,
+    compression: MessageCompression,
 }
 
 impl UdpBackend {
-    pub fn new<T: net::ToSocketAddrs>(local: T,
-                                      destination: T,
-                                      chunk_size: u16)
-                                      -> Result<UdpBackend, CreateBackendError> {
+    pub fn new<T: net::ToSocketAddrs>(destination: T, chunk_size: ChunkSize) -> Result<UdpBackend> {
 
-        let socket = try!(net::UdpSocket::bind(local));
-        let destination_addr = try!(try!(destination.to_socket_addrs())
-            .nth(0)
-            .ok_or(CreateBackendError("Invalid destination server address")));
+        let destination_addr =
+            destination.to_socket_addrs()
+                .chain_err(|| {
+                    ErrorKind::BackendCreationFailed("Failed to parse a destination address")
+                })?
+                .nth(0)
+                .ok_or(ErrorKind::BackendCreationFailed("Invalid destination server address"))?;
+
+        let local = match destination_addr {
+            net::SocketAddr::V4(_) => "127.0.0.1:0",
+            net::SocketAddr::V6(_) => "[::1]:0",
+        };
+
+        let socket = net::UdpSocket::bind(local).chain_err(|| {
+                ErrorKind::BackendCreationFailed("Failed to bind local socket")
+            })?;
+
 
         Ok(UdpBackend {
             socket: socket,
             destination: destination_addr,
             chunk_size: chunk_size,
+            panic_on_error: false,
+            compression: MessageCompression::default(),
         })
+    }
+
+    pub fn set_panic_on_error(&mut self, mode: bool) -> &mut Self {
+        self.panic_on_error = mode;
+        self
+    }
+
+    pub fn compression(&self) -> MessageCompression {
+        self.compression
+    }
+
+    pub fn set_compression(&mut self, compression: MessageCompression) -> &mut Self {
+        self.compression = compression;
+        self
     }
 }
 
 impl Backend for UdpBackend {
-    fn log(&self, msg: WireMessage) {
+    fn log_message(&self, msg: WireMessage) -> Result<()> {
+        let chunked_msg = msg.to_chunked_message(self.chunk_size, self.compression)?;
+        let chunked_msg_size = chunked_msg.len();
+        let sent_bytes = chunked_msg.iter()
+            .map(|chunk| match self.socket.send_to(&chunk, self.destination) {
+                Err(_) => 0,
+                Ok(size) => size,
+            })
+            .fold(0_u64, |carry, size| carry + size as u64);
 
-        let msg_json = msg.to_json_string().unwrap();
-
-        // encode as gzip
-        let mut encoder = gzip::Encoder::new(Vec::new()).unwrap();
-        io::copy(&mut io::Cursor::new(msg_json), &mut encoder).unwrap();
-        let msg_gzipped = encoder.finish().into_result().unwrap();
-
-        let chunked_msg = ChunkedMessage::new(self.chunk_size, msg_gzipped);
-
-        chunked_msg.into_iter()
-            .map(|chunk| self.socket.send_to(&chunk, self.destination))
-            .collect::<Vec<Result<usize, io::Error>>>();
-    }
-}
-
-struct ChunkedMessage {
-    chunk_size: u16,
-    message: Vec<u8>,
-    chunk_num: u8,
-    num_chunks: u8,
-    message_id: [u8; 8],
-}
-
-impl ChunkedMessage {
-    fn new(chunk_size: u16, message: Vec<u8>) -> ChunkedMessage {
-        let num_chunks: u64 = (message.len() as f64 / chunk_size as f64).ceil() as u64;
-
-        if num_chunks > 128 {
-            panic!("Message size exceeds maximum number of chunks")
+        if sent_bytes != chunked_msg_size {
+            bail!(ErrorKind::LogTransmitFailed);
         }
 
-        ChunkedMessage {
-            chunk_size: chunk_size,
-            message: message,
-            chunk_num: 0,
-            message_id: Self::gen_msg_id(),
-            num_chunks: num_chunks as u8,
-        }
+        Ok(())
     }
 
-    fn gen_msg_id() -> [u8; 8] {
-        let mut raw_id: [u8; 8] = [0; 8];
-
-        for i in 0..8 {
-            raw_id[i] = rand::random();
-        }
-
-        raw_id
-    }
-}
-
-impl Iterator for ChunkedMessage {
-    type Item = Vec<u8>;
-
-    fn next(&mut self) -> Option<Vec<u8>> {
-        if self.chunk_num >= self.num_chunks {
-            return None;
-        }
-
-        let mut chunk = Vec::new();
-        let slice_start = (self.chunk_num as u16 * self.chunk_size) as usize;
-        let slice_end = slice_start + self.chunk_size as usize;
-
-        chunk.extend(MAGIC_BYTES.iter().cloned());
-        chunk.extend(self.message_id.iter().cloned());
-        chunk.push(self.chunk_num);
-        chunk.push(self.num_chunks);
-        chunk.extend(self.message[slice_start..slice_end].iter().cloned());
-
-        Some(chunk)
+    fn panic_on_error(&self) -> bool {
+        self.panic_on_error
     }
 }
