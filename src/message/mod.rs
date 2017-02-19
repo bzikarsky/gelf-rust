@@ -77,14 +77,14 @@ impl<'a> Message<'a> {
         &self.metadata
     }
 
-    pub fn set_metadata(&mut self, key: &'a str, value: String) -> Result<()> {
+    pub fn set_metadata(&mut self, key: &'a str, value: String) -> Result<&mut Self> {
         if key == "id" {
             bail!(ErrorKind::IllegalNameForAdditional(String::from(key)));
         }
 
         self.metadata.insert(key, value);
 
-        Ok(())
+        Ok(self)
     }
 }
 

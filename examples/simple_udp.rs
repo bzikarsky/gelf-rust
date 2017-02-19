@@ -43,7 +43,7 @@ fn main() {
 
     // Add an example metadata field which is added to every message which does not contain
     // the key already
-    logger.add_default_metadata(String::from("facility"),
+    logger.set_default_metadata(String::from("facility"),
                                 String::from(::std::env::current_exe()
                                     .unwrap()
                                     .as_path()

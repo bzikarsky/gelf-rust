@@ -7,55 +7,10 @@ use backends::Backend;
 use message::{Message, WireMessage};
 use errors::{Result, ErrorKind};
 
-/// Logger for sending log-messages in [GELF-format](http://docs.graylog.org/en/2.2/pages/gelf.html)
-/// to a GELF server, e.g. [Graylog](https://www.graylog.org/)
+/// Logger for sending log-messages
 ///
 /// A `Logger` instance can be either used as a standalone object to log directly
-/// to a log-server or it can installed as `log`-crate log-handler.
-///
-/// # Standalone usage
-///
-/// Note that the simple constructor (`Logger::new`) is used. It determines the
-/// local hostname by itself.
-///
-/// ```
-/// # use gelf::NullBackend;
-/// use gelf::{Logger, UdpBackend, Message, Level};
-///
-/// let backend = UdpBackend::new("127.0.0.1:12201").expect("Failed to create UDP backend");
-/// # let backend = NullBackend::new();
-/// let logger = Logger::new(Box::new(backend)).expect("Failed to determine hostname");
-///
-/// logger.log_message(Message::new(String::from("Test log message!"), Some(Level::Debug)));
-/// ```
-///
-/// # Usage with the `log`-crate
-///
-/// We assume the `log`-crate has been imported with macros enabled, like
-/// this `#[macro_use] extern crate log;`.
-///
-/// ```
-/// # #[macro_use] extern crate log;
-/// # extern crate gelf;
-/// # use gelf::NullBackend;
-/// use gelf::{Logger, UdpBackend, Message, Level};
-/// use log::LogLevelFilter;
-///
-/// # pub fn main() {
-/// let backend = UdpBackend::new("127.0.0.1:12201").expect("Failed to create UDP backend");
-/// # let backend = NullBackend::new();
-/// let logger = Logger::new(Box::new(backend)).expect("Failed to determine hostname");
-///
-/// logger.install(LogLevelFilter::Trace).expect("Failed to install logger");
-///
-/// debug!("Debug message");
-/// warn!("Warning");
-/// # }
-/// ```
-///
-/// # Further information
-///
-/// For more information check out the `examples/` directory.
+/// to a log-server or it can be installed as a `log`-crate log-handler (with `Logger::install`).
 pub struct Logger {
     hostname: String,
     backend: Box<Backend>,
@@ -128,7 +83,7 @@ impl Logger {
         &self.default_metadata
     }
 
-    /// Add a default metadata field
+    /// Set a default metadata field
     ///
     /// Every logged `Message` is checked for every default_metadata field.
     /// If it contains an entry with the key, the default is ignored. But if
@@ -140,12 +95,12 @@ impl Logger {
     /// # use gelf::{Logger, NullBackend, Message};
     /// # let backend = NullBackend::new();
     /// # let mut logger = Logger::new(Box::new(backend)).unwrap();
-    /// logger.add_default_metadata(String::from("facility"), String::from("my_awesome_rust_service"));
+    /// logger.set_default_metadata(String::from("facility"), String::from("my_awesome_rust_service"));
     ///
     /// logger.log_message(Message::new(String::from("This is important information"), None));
     /// // -> The message will contain an additional field "_facility" with the value "my_awesome_rust_service"
     /// ```
-    pub fn add_default_metadata(&mut self, key: String, value: String) -> &mut Self {
+    pub fn set_default_metadata(&mut self, key: String, value: String) -> &mut Self {
         self.default_metadata.insert(key, value);
         self
     }

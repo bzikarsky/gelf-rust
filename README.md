@@ -40,9 +40,16 @@ Finally add the crate to your application:
 extern crate gelf;
 ```
 
-## Usage
+## Examples & use
+Two introductory examples (for both standalone and `log`-integrated uses) can be found 
+[in the crate's documentation](https://docs.rs/gelf/).
 
-*TODO: Standalone example, ::log example, different backends, refer to `/examples`*
+Additional examples covering different backends and other advanced uses can be found in [`/examples`](examples).
+Every one of those can be run with ´cargo´, e.g.:
+
+```
+cargo run --example simple_udp
+```
 
 ## Documentation
 
