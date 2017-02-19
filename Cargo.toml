@@ -1,15 +1,24 @@
 [package]
 name = "gelf"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Benjamin Zikarsky <benjamin@zikarsky.de>"]
+description = "A library for logging GELF messages to a Graylog compatible server"
+repository = "https://github.com/bzikarsky/gelf-rust"
+homepage = "https://github.com/bzikarsky/gelf-rust"
+keywords = ["gelf", "log", "graylog", "logging"]
+license = "MIT"
+readme = "README.md"
+
+[badges]
+travis-ci = { repository = "bzikarsky/gelf-rust" }
 
 [dependencies]
-log = "0.3.6"
-chrono = "0.3.0"
-hostname = "0.1.3"
-libc = "0.2.20"
-serde_json = "0.9.6"
-serde = "0.9.7"
-libflate = "0.1.3"
-rand = "0.3.15"
-error-chain = "0.9.0"
+log = "^0.3.6"
+chrono = "^0.3.0"
+hostname = "^0.1.3"
+libc = "^0.2.20"
+serde_json = "^0.9.6"
+serde = "^0.9.7"
+libflate = "^0.1.3"
+rand = "^0.3.15"
+error-chain = "^0.9.0"
