@@ -3,9 +3,11 @@ use errors::Result;
 
 mod udp;
 mod tcp;
+mod null;
 
 pub use self::udp::UdpBackend;
 pub use self::tcp::TcpBackend;
+pub use self::null::NullBackend;
 
 pub trait Backend: Sync + Send {
     fn panic_on_error(&self) -> bool;
