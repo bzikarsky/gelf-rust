@@ -29,7 +29,7 @@ static HOSTNAME: &'static str = "test.local";
 
 fn main() {
     // Create a UDP backend for given host and chunk_size
-    let mut backend = UdpBackend::new(GRAYLOG_HOST, CHUNK_SIZE)
+    let mut backend = UdpBackend::new_with_chunksize(GRAYLOG_HOST, CHUNK_SIZE)
         .expect("Failed to create a UDP backend");
 
     // Configure compression (can be ommited, defaults to Gzip)

@@ -13,8 +13,13 @@ pub struct UdpBackend {
 }
 
 impl UdpBackend {
-    pub fn new<T: net::ToSocketAddrs>(destination: T, chunk_size: ChunkSize) -> Result<UdpBackend> {
+    pub fn new<T: net::ToSocketAddrs>(destination: T) -> Result<UdpBackend> {
+        Self::new_with_chunksize(destination, ChunkSize::LAN)
+    }
 
+    pub fn new_with_chunksize<T: net::ToSocketAddrs>(destination: T,
+                                                     chunk_size: ChunkSize)
+                                                     -> Result<UdpBackend> {
         let destination_addr =
             destination.to_socket_addrs()
                 .chain_err(|| {
