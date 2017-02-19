@@ -15,7 +15,7 @@ pub fn run_debug_server_udp(host: &str, timeout_in_s: u64) {
         if buf[0] == 0x1e && buf[1] == 0x0f {
             let pos = buf[10];
             let total = buf[11];
-            let id: u64 = buf[2..10].iter().fold(0, |x, &i| x << 4 | i as u64);
+            let id: u64 = buf[2..10].iter().fold(0, |x, &i| x << 8 | i as u64);
 
             println!("Received message chunk ({}/{}) for message '{:?}': {}",
                      pos,
