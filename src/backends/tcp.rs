@@ -7,7 +7,6 @@ use message::{WireMessage, MessageCompression};
 use errors::{Result, ErrorKind, ResultExt};
 
 pub struct TcpBackend {
-    panic_on_error: bool,
     socket: sync::Arc<sync::Mutex<net::TcpStream>>,
     compression: MessageCompression,
 }
@@ -20,7 +19,6 @@ impl TcpBackend {
                 })?;
 
         Ok(TcpBackend {
-            panic_on_error: false,
             socket: sync::Arc::new(sync::Mutex::new(socket)),
             compression: MessageCompression::default(),
         })
@@ -28,10 +26,6 @@ impl TcpBackend {
 }
 
 impl Backend for TcpBackend {
-    fn panic_on_error(&self) -> bool {
-        self.panic_on_error
-    }
-
     fn log_message(&self, msg: WireMessage) -> Result<()> {
         let msg = msg.to_compressed_gelf(self.compression)?;
         let mut socket = self.socket.lock().unwrap();

@@ -116,7 +116,7 @@ mod logger;
 mod level;
 
 pub use errors::{Error, ErrorKind, Result};
-pub use backends::{UdpBackend, TcpBackend, NullBackend};
+pub use backends::{Backend, UdpBackend, TcpBackend, NullBackend};
 pub use logger::Logger;
 pub use message::{Message, MessageCompression, ChunkSize};
 pub use level::Level;

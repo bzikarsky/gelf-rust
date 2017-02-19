@@ -13,10 +13,6 @@ impl NullBackend {
 }
 
 impl Backend for NullBackend {
-    fn panic_on_error(&self) -> bool {
-        false
-    }
-
     /// Log a message.
     ///
     /// Logging a message with NullBackend is a noop and will never fail.

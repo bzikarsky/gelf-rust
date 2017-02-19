@@ -9,16 +9,13 @@ pub use self::udp::UdpBackend;
 pub use self::tcp::TcpBackend;
 pub use self::null::NullBackend;
 
+/// A trait for a GELF backend
+///
+/// A backend is responsible for transporting a `WireMessage` to a
+/// Gelf host. It is responsible for creating required sockets and chosing
+/// proper serialization and encoding options (e.g. chunking with
+/// `ChunkedMessage` or compression with `MessageCompression`)
 pub trait Backend: Sync + Send {
-    fn panic_on_error(&self) -> bool;
-
+    /// Log a message.
     fn log_message(&self, msg: WireMessage) -> Result<()>;
-
-    fn log(&self, msg: WireMessage) {
-        let result = self.log_message(msg);
-
-        if self.panic_on_error() && result.is_err() {
-            panic!(result.unwrap_err());
-        }
-    }
 }

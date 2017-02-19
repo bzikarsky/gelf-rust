@@ -8,7 +8,6 @@ pub struct UdpBackend {
     socket: net::UdpSocket,
     destination: net::SocketAddr,
     chunk_size: ChunkSize,
-    panic_on_error: bool,
     compression: MessageCompression,
 }
 
@@ -20,6 +19,7 @@ impl UdpBackend {
     pub fn new_with_chunksize<T: net::ToSocketAddrs>(destination: T,
                                                      chunk_size: ChunkSize)
                                                      -> Result<UdpBackend> {
+        // Get a single net::SocketAddr form the destination-address type
         let destination_addr =
             destination.to_socket_addrs()
                 .chain_err(|| {
@@ -28,6 +28,7 @@ impl UdpBackend {
                 .nth(0)
                 .ok_or(ErrorKind::BackendCreationFailed("Invalid destination server address"))?;
 
+        // Create an appropiate local socket for the given destination
         let local = match destination_addr {
             net::SocketAddr::V4(_) => "127.0.0.1:0",
             net::SocketAddr::V6(_) => "[::1]:0",
@@ -37,19 +38,12 @@ impl UdpBackend {
                 ErrorKind::BackendCreationFailed("Failed to bind local socket")
             })?;
 
-
         Ok(UdpBackend {
             socket: socket,
             destination: destination_addr,
             chunk_size: chunk_size,
-            panic_on_error: false,
             compression: MessageCompression::default(),
         })
-    }
-
-    pub fn set_panic_on_error(&mut self, mode: bool) -> &mut Self {
-        self.panic_on_error = mode;
-        self
     }
 
     pub fn compression(&self) -> MessageCompression {
@@ -78,9 +72,5 @@ impl Backend for UdpBackend {
         }
 
         Ok(())
-    }
-
-    fn panic_on_error(&self) -> bool {
-        self.panic_on_error
     }
 }
