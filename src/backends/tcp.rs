@@ -6,12 +6,17 @@ use backends::Backend;
 use message::{WireMessage, MessageCompression};
 use errors::{Result, ErrorKind, ResultExt};
 
+/// TcpBackend is a simple GELF over TCP backend.
+///
+/// WireMessages are simply serialized and optionally compressed and pushed to
+/// a Gelf host over TCP. TCP's stream-based nature requires no chunking.
 pub struct TcpBackend {
     socket: sync::Arc<sync::Mutex<net::TcpStream>>,
     compression: MessageCompression,
 }
 
 impl TcpBackend {
+    /// Construct a new TcpBackend.
     pub fn new<T: net::ToSocketAddrs>(destination: T) -> Result<TcpBackend> {
         let socket =
             net::TcpStream::connect(destination).chain_err(|| {
@@ -26,6 +31,7 @@ impl TcpBackend {
 }
 
 impl Backend for TcpBackend {
+    /// Log a message over TCP.
     fn log_message(&self, msg: WireMessage) -> Result<()> {
         let msg = msg.to_compressed_gelf(self.compression)?;
         let mut socket = self.socket.lock().unwrap();
@@ -35,6 +41,7 @@ impl Backend for TcpBackend {
 }
 
 impl Drop for TcpBackend {
+    /// Try to close the connection gracefully when TcpBackend goes out of scope
     fn drop(&mut self) {
         // When drop() is called unwrap() should never fail
         let mut socket = self.socket.lock().unwrap();

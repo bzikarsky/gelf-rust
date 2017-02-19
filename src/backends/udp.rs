@@ -4,6 +4,13 @@ use backends::Backend;
 use message::{WireMessage, MessageCompression, ChunkSize};
 use errors::{Result, ErrorKind, ResultExt};
 
+/// UdpBackend is the default and standard GELF backend
+///
+/// It pushes messages to a GELF host via UDP. Messages are cut into chunks
+/// of a certain chunk-size. This size is important since the chunk-size +
+/// a stable overhead of 12 bytes needs to fit the transport layer's mtu.
+///
+/// If the message fits into a single chunk, no chunking is applied.
 pub struct UdpBackend {
     socket: net::UdpSocket,
     destination: net::SocketAddr,
@@ -12,10 +19,12 @@ pub struct UdpBackend {
 }
 
 impl UdpBackend {
+    /// Construct a new UdpBackend with default chunk-size (ChunkSize::LAN)
     pub fn new<T: net::ToSocketAddrs>(destination: T) -> Result<UdpBackend> {
         Self::new_with_chunksize(destination, ChunkSize::LAN)
     }
 
+    /// Construct an new UdpBackend with the given chunk-size
     pub fn new_with_chunksize<T: net::ToSocketAddrs>(destination: T,
                                                      chunk_size: ChunkSize)
                                                      -> Result<UdpBackend> {
@@ -30,8 +39,8 @@ impl UdpBackend {
 
         // Create an appropiate local socket for the given destination
         let local = match destination_addr {
-            net::SocketAddr::V4(_) => "127.0.0.1:0",
-            net::SocketAddr::V6(_) => "[::1]:0",
+            net::SocketAddr::V4(_) => "0.0.0.0:0",
+            net::SocketAddr::V6(_) => "[::]:0",
         };
 
         let socket = net::UdpSocket::bind(local).chain_err(|| {
@@ -46,10 +55,12 @@ impl UdpBackend {
         })
     }
 
+    /// Return the current set compression algorithm
     pub fn compression(&self) -> MessageCompression {
         self.compression
     }
 
+    /// Set the compression algorithm
     pub fn set_compression(&mut self, compression: MessageCompression) -> &mut Self {
         self.compression = compression;
         self
@@ -57,6 +68,7 @@ impl UdpBackend {
 }
 
 impl Backend for UdpBackend {
+    /// Log a message via UDP.
     fn log_message(&self, msg: WireMessage) -> Result<()> {
         let chunked_msg = msg.to_chunked_message(self.chunk_size, self.compression)?;
         let chunked_msg_size = chunked_msg.len();
