@@ -18,13 +18,15 @@ use errors::{Result, ErrorKind};
 /// Note that the simple constructor (`Logger::new`) is used. It determines the
 /// local hostname by itself.
 ///
-/// ``` no_run
+/// ```
+/// # use gelf::NullBackend;
 /// use gelf::{Logger, UdpBackend, Message, Level};
 ///
-/// let backend = UdpBackend::new("127.0.0.1:12201");
+/// let backend = UdpBackend::new("127.0.0.1:12201").expect("Failed to create UDP backend");
+/// # let backend = NullBackend::new();
 /// let logger = Logger::new(Box::new(backend)).expect("Failed to determine hostname");
 ///
-/// logger.log_message(Message::new("Test log message!", Some(Level::Debug)));
+/// logger.log_message(Message::new(String::from("Test log message!"), Some(Level::Debug)));
 /// ```
 ///
 /// # Usage with the `log`-crate
@@ -32,17 +34,23 @@ use errors::{Result, ErrorKind};
 /// We assume the `log`-crate has been imported with macros enabled, like
 /// this `#[macro_use] extern crate log;`.
 ///
-/// ``` no_run
+/// ```
+/// # #[macro_use] extern crate log;
+/// # extern crate gelf;
+/// # use gelf::NullBackend;
 /// use gelf::{Logger, UdpBackend, Message, Level};
 /// use log::LogLevelFilter;
 ///
-/// let backend = UdpBackend::new("127.0.0.1:12201");
+/// # pub fn main() {
+/// let backend = UdpBackend::new("127.0.0.1:12201").expect("Failed to create UDP backend");
+/// # let backend = NullBackend::new();
 /// let logger = Logger::new(Box::new(backend)).expect("Failed to determine hostname");
 ///
 /// logger.install(LogLevelFilter::Trace).expect("Failed to install logger");
 ///
 /// debug!("Debug message");
 /// warn!("Warning");
+/// # }
 /// ```
 ///
 /// # Further information
@@ -128,11 +136,13 @@ impl Logger {
     ///
     /// This can be used for example to add a `facility` to every message:
     ///
-    /// ``` no_run
-    /// let mut logger = Logger::new(..);
-    /// logger.add_default_metadata(String::from("facility"), String::from("my_awesome_rust_service"))
+    /// ```
+    /// # use gelf::{Logger, NullBackend, Message};
+    /// # let backend = NullBackend::new();
+    /// # let mut logger = Logger::new(Box::new(backend)).unwrap();
+    /// logger.add_default_metadata(String::from("facility"), String::from("my_awesome_rust_service"));
     ///
-    /// logger.log_message(Message::new("This is important information"), None);
+    /// logger.log_message(Message::new(String::from("This is important information"), None));
     /// // -> The message will contain an additional field "_facility" with the value "my_awesome_rust_service"
     /// ```
     pub fn add_default_metadata(&mut self, key: String, value: String) -> &mut Self {
