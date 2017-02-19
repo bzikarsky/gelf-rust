@@ -1,9 +1,10 @@
 use std::collections::HashMap;
+
 use serde;
 use serde::ser::SerializeMap;
 use serde_json;
 
-use super::{Message, ChunkSize, ChunkedMessage, MessageCompression};
+use message::{Message, ChunkSize, ChunkedMessage, MessageCompression};
 use errors::{Result, ErrorKind, ResultExt};
 use logger::Logger;
 

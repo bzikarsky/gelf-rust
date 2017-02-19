@@ -28,12 +28,27 @@ impl TcpBackend {
             compression: MessageCompression::default(),
         })
     }
+
+    /// Return the current set compression algorithm
+    pub fn compression(&self) -> MessageCompression {
+        self.compression
+    }
+
+    /// Set the compression algorithm
+    pub fn set_compression(&mut self, compression: MessageCompression) -> &mut Self {
+        self.compression = compression;
+        self
+    }
 }
 
 impl Backend for TcpBackend {
     /// Log a message over TCP.
     fn log_message(&self, msg: WireMessage) -> Result<()> {
-        let msg = msg.to_compressed_gelf(self.compression)?;
+        let mut msg = msg.to_compressed_gelf(self.compression)?;
+
+        // raw messages need to be terminated with a 0-byte
+        msg.push(0x00);
+
         let mut socket = self.socket.lock().unwrap();
 
         socket.write_all(&msg).chain_err(|| ErrorKind::LogTransmitFailed)
