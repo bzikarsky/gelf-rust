@@ -7,18 +7,32 @@ use super::{Message, ChunkSize, ChunkedMessage, MessageCompression};
 use errors::{Result, ErrorKind, ResultExt};
 use logger::Logger;
 
+/// WireMessage is the representation of a fully assembled GELF message
+///
+/// A fully assembled requires information only present in the `Logger`:
+/// Both the local hostname and possible missing metadata fields need to be
+/// added to the message.
+///
+/// A WireMessage can be serialized to GELF/JSON (with and without compression)
+/// and is the abstraction passed to the transportation backends.
 pub struct WireMessage<'a> {
     host: &'a str,
     message: Message<'a>,
 }
 
 impl<'a> WireMessage<'a> {
+    /// Construct a new wire message
+    ///
+    /// The logger is required for populating the `host`-field and metadata
+    /// fields which were not added to the message.
     pub fn new(mut msg: Message<'a>, logger: &'a Logger) -> Self {
+        // Filter all fields missing from the message
         let additionals_from_default: HashMap<&String, &String> = logger.default_metadata()
             .iter()
             .filter(|&(key, _)| !msg.metadata.contains_key(key.as_str()))
             .collect();
 
+        // add the missing metadata
         for (key, value) in additionals_from_default {
             msg.set_metadata(key.as_str(), value.clone()).ok();
         }
@@ -29,15 +43,17 @@ impl<'a> WireMessage<'a> {
         }
     }
 
+    /// Return a GELF/JSON string of this message
     pub fn to_gelf(&self) -> Result<String> {
         serde_json::to_string(self).chain_err(|| ErrorKind::SerializeMessageFailed)
     }
 
+    /// Return a compressed GELF/JSON string of this message
     pub fn to_compressed_gelf(&self, compression: MessageCompression) -> Result<Vec<u8>> {
-        let json_str = self.to_gelf()?;
-        compression.compress(&json_str)
+        compression.compress(&self)
     }
 
+    /// Serialize the messages and prepare it for chunking
     pub fn to_chunked_message(&self,
                               chunk_size: ChunkSize,
                               compression: MessageCompression)
@@ -48,6 +64,7 @@ impl<'a> WireMessage<'a> {
 }
 
 impl<'a> serde::Serialize for WireMessage<'a> {
+    /// Serialize the message to a GELF/JSON string
     fn serialize<S>(&self, serializer: S) -> ::std::result::Result<S::Ok, S::Error>
         where S: serde::Serializer
     {
@@ -62,6 +79,10 @@ impl<'a> serde::Serialize for WireMessage<'a> {
         map.serialize_key("short_message")?;
         map.serialize_value(self.message.short_message())?;
 
+        map.serialize_key("level")?;
+        let level = self.message.level as u8;
+        map.serialize_value(&level)?;
+
         if self.message.full_message().is_some() {
             map.serialize_key("full_message")?;
             map.serialize_value(&self.message.full_message())?;
@@ -70,12 +91,6 @@ impl<'a> serde::Serialize for WireMessage<'a> {
         if self.message.timestamp().is_some() {
             map.serialize_key("timestamp")?;
             map.serialize_value(&self.message.timestamp().unwrap().timestamp())?;
-        }
-
-        if self.message.level().is_some() {
-            let level = self.message.level().unwrap() as i8;
-            map.serialize_key("level")?;
-            map.serialize_value(&level)?;
         }
 
         for (key, value) in self.message.all_metadata().iter() {

@@ -11,10 +11,14 @@ use errors::{Result, ErrorKind};
 ///
 /// A `Logger` instance can be either used as a standalone object to log directly
 /// to a log-server or it can be installed as a `log`-crate log-handler (with `Logger::install`).
+///
+/// By default all encountered errors will be silently ignored. If you want the logger
+/// to panic when an error occurs, you can change the behaviour with `Logger::enable_panic_on_error`.
 pub struct Logger {
     hostname: String,
     backend: Box<Backend>,
     default_metadata: HashMap<String, String>,
+    panic_on_error: bool,
 }
 
 impl Logger {
@@ -23,7 +27,7 @@ impl Logger {
     /// The backend needs to be boxed for usage as a logger with the `log`-crate.
     /// This constructor tries to determine the local hostname (required by GELF)
     /// with the help of the `hostname`-crate. If you want to set a custom hostname
-    /// check out the `Logger::new_with_hostname` constructor
+    /// check out the `Logger::new_with_hostname` constructor.
     pub fn new(backend: Box<Backend>) -> Result<Self> {
         hostname::get_hostname()
             .map(|hostname| Logger::new_with_hostname(backend, &hostname))
@@ -39,6 +43,7 @@ impl Logger {
             hostname: String::from(hostname),
             backend: backend,
             default_metadata: HashMap::new(),
+            panic_on_error: false,
         }
     }
 
@@ -64,7 +69,11 @@ impl Logger {
     /// The logger will automatically all `default_metadata` fields to the message
     /// which are missing in the passed `Message`.
     pub fn log_message(&self, msg: Message) {
-        self.backend.log(WireMessage::new(msg, &self));
+        let result = self.backend.log_message(WireMessage::new(msg, &self));
+
+        if result.is_err() && self.panic_on_error {
+            panic!(result.unwrap_err());
+        }
     }
 
     /// Return the hostname used for GELF's `host`-field
@@ -97,11 +106,28 @@ impl Logger {
     /// # let mut logger = Logger::new(Box::new(backend)).unwrap();
     /// logger.set_default_metadata(String::from("facility"), String::from("my_awesome_rust_service"));
     ///
-    /// logger.log_message(Message::new(String::from("This is important information"), None));
+    /// logger.log_message(Message::new(String::from("This is important information")));
     /// // -> The message will contain an additional field "_facility" with the value "my_awesome_rust_service"
     /// ```
     pub fn set_default_metadata(&mut self, key: String, value: String) -> &mut Self {
         self.default_metadata.insert(key, value);
+        self
+    }
+
+    /// Return a flag whether the logger panics when it encounters an error
+    pub fn panic_on_error(&self) -> bool {
+        self.panic_on_error
+    }
+
+    /// Force the logger to panic when it encounters an error
+    pub fn enable_panic_on_error(&mut self) -> &mut Self {
+        self.panic_on_error = true;
+        self
+    }
+
+    /// Force the logger to ignore an encountered error silently
+    pub fn disable_panic_on_error(&mut self) -> &mut Self {
+        self.panic_on_error = false;
         self
     }
 }

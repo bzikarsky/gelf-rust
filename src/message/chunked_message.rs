@@ -1,14 +1,24 @@
 use std::cmp;
+
 use rand;
 
 use errors::{Result, ErrorKind};
 
-/// The overhead per chunk is 12 bytes: magic(2) + id(8) + pos(1) + total (1)
+/// Overhead per chunk is 12 bytes: magic(2) + id(8) + pos(1) + total (1)
 const CHUNK_OVERHEAD: u8 = 12;
+
+/// Chunk-size for LANs
 const CHUNK_SIZE_LAN: u16 = 8154;
+
+/// Chunk-size for WANs
 const CHUNK_SIZE_WAN: u16 = 1420;
+
+/// Magic bytes identifying a GELF message chunk
 static MAGIC_BYTES: &'static [u8; 2] = b"\x1e\x0f";
 
+/// ChunkSize is a value type representing the size of a message-chunk
+///
+/// It provides default sizes for WANs and LANs
 #[derive(Clone, Copy, Debug)]
 pub enum ChunkSize {
     LAN,
@@ -17,6 +27,7 @@ pub enum ChunkSize {
 }
 
 impl ChunkSize {
+    /// Return the size associated with the chunk-size
     pub fn size(&self) -> u16 {
         match *self {
             ChunkSize::LAN => CHUNK_SIZE_LAN,
@@ -26,6 +37,7 @@ impl ChunkSize {
     }
 }
 
+/// ChunkedMessage is an internal type for chunking an already serialized `WireMessage`
 pub struct ChunkedMessage {
     chunk_size: ChunkSize,
     payload: Vec<u8>,
@@ -34,13 +46,18 @@ pub struct ChunkedMessage {
 }
 
 impl ChunkedMessage {
+    /// Construct a new ChunkedMessage
+    ///
+    /// Several sanity checks are performed on construction:
+    /// - chunk_size must be greater than 0
+    /// - GELF allows for a maximum of 128 chunks per message
     pub fn new(chunk_size: ChunkSize, message: Vec<u8>) -> Result<ChunkedMessage> {
 
         if chunk_size.size() == 0 {
             bail!(ErrorKind::IllegalChunkSize(chunk_size.size()));
         }
 
-        // Ceiled integer diviosn with (a + b - 1) / b
+        // Ceiled integer division with (a + b - 1) / b
         // Calculate with 64bit integers to avoid overflow - maybe replace with checked_*?
         let size = chunk_size.size() as u64;
         let num_chunks = (message.len() as u64 + size as u64 - 1) / size;
@@ -59,6 +76,7 @@ impl ChunkedMessage {
         })
     }
 
+    /// Return the byte-length of the chunked message inclduing all overhead
     pub fn len(&self) -> u64 {
         if self.num_chunks > 1 {
             self.payload.len() as u64 + self.num_chunks as u64 * CHUNK_OVERHEAD as u64
@@ -67,18 +85,23 @@ impl ChunkedMessage {
         }
     }
 
+    /// Return an iterator over all chunks of the message
     pub fn iter(&self) -> ChunkedMessageIterator {
         ChunkedMessageIterator::new(self)
     }
 }
 
+/// An iterator over all a chunked message's chunks
+///
+/// This always be constructed by `ChunkedMessage`
 pub struct ChunkedMessageIterator<'a> {
     chunk_num: u8,
     message: &'a ChunkedMessage,
 }
 
 impl<'a> ChunkedMessageIterator<'a> {
-    pub fn new(msg: &'a ChunkedMessage) -> ChunkedMessageIterator {
+    /// Create a new ChunkedMessageIterator
+    fn new(msg: &'a ChunkedMessage) -> ChunkedMessageIterator {
         ChunkedMessageIterator {
             message: msg,
             chunk_num: 0,
@@ -89,6 +112,7 @@ impl<'a> ChunkedMessageIterator<'a> {
 impl<'a> Iterator for ChunkedMessageIterator<'a> {
     type Item = Vec<u8>;
 
+    /// Returns the next chunk (if existant)
     fn next(&mut self) -> Option<Vec<u8>> {
         if self.chunk_num >= self.message.num_chunks {
             return None;
@@ -104,6 +128,12 @@ impl<'a> Iterator for ChunkedMessageIterator<'a> {
 
         // The chunk header is only required when the message size exceeds one chunk
         if self.message.num_chunks > 1 {
+            // Chunk binary layout:
+            //  2 bytes (magic bytes)
+            //  8 bytes (message id)
+            //  1 byte  (chunk number)
+            //  1 byte  (total amount of chunks in this message)
+            //  n bytes (chunk payload)
             chunk.extend(MAGIC_BYTES.iter());
             chunk.extend(self.message.id.as_bytes());
             chunk.push(self.chunk_num);
@@ -118,10 +148,15 @@ impl<'a> Iterator for ChunkedMessageIterator<'a> {
     }
 }
 
+/// The representation of a chunked message id
+///
+/// Every chunked message requires an ID which consists of 8 bytes. This is the same
+/// as an 64bit integer. This struct provides some convenience functions on this type.
 struct ChunkedMessageId([u8; 8]);
 
-
+#[allow(dead_code)]
 impl<'a> ChunkedMessageId {
+    /// Create a new, random ChunkedMessageId.
     fn random() -> ChunkedMessageId {
         let mut bytes = [0; 8];
 
@@ -132,7 +167,7 @@ impl<'a> ChunkedMessageId {
         return ChunkedMessageId::from_bytes(bytes);
     }
 
-    #[allow(dead_code)]
+    /// Create a new ChunkedMessageId from a 64 int.
     fn from_int(mut id: u64) -> ChunkedMessageId {
         let mut bytes = [0; 8];
         for i in 0..8 {
@@ -143,15 +178,17 @@ impl<'a> ChunkedMessageId {
         ChunkedMessageId(bytes)
     }
 
+    /// Create a new ChunkedMessageId from a byte-array.
     fn from_bytes(bytes: [u8; 8]) -> ChunkedMessageId {
         ChunkedMessageId(bytes)
     }
 
+    /// Return the message id as a byte-slice.
     fn as_bytes(&self) -> &[u8; 8] {
         &self.0
     }
 
-    #[allow(dead_code)]
+    /// Return the message id as an 64bit uint.
     fn to_int(&self) -> u64 {
         self.0.iter().fold(0_u64, |id, &i| id << 8 | i as u64)
     }

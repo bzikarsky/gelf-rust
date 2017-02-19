@@ -37,8 +37,7 @@
 //!          String::from("example-rust-app"));
 //!
 //!     // Create a (complex) message
-//!     let mut message = Message::new(
-//!         String::from("Custom message!"), Some(Level::Debug));
+//!     let mut message = Message::new(String::from("Custom message!"));
 //!     message
 //!         .set_full_message(String::from("The full message text is more descriptive"))
 //!         .set_metadata("foo", String::from("bar")).unwrap()
