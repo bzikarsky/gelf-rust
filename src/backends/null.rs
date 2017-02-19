@@ -5,7 +5,7 @@ use errors::Result;
 pub struct NullBackend;
 
 impl NullBackend {
-    fn new() -> NullBackend {
+    pub fn new() -> NullBackend {
         NullBackend {}
     }
 }
