@@ -5,6 +5,7 @@ authors = ["Benjamin Zikarsky <benjamin@zikarsky.de>"]
 description = "A library for logging GELF messages to a Graylog compatible server"
 repository = "https://github.com/bzikarsky/gelf-rust"
 homepage = "https://github.com/bzikarsky/gelf-rust"
+documentation = "https://docs.rs/gelf/"
 keywords = ["gelf", "log", "graylog", "logging"]
 license = "MIT"
 readme = "README.md"
