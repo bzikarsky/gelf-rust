@@ -10,9 +10,6 @@ keywords = ["gelf", "log", "graylog", "logging"]
 license = "MIT"
 readme = "README.md"
 
-[badges]
-travis-ci = { repository = "bzikarsky/gelf-rust" }
-
 [dependencies]
 log = "^0.3.6"
 chrono = "^0.3.0"
