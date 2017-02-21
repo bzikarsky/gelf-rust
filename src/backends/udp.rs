@@ -47,6 +47,10 @@ impl UdpBackend {
                 ErrorKind::BackendCreationFailed("Failed to bind local socket")
             })?;
 
+        socket.set_nonblocking(true).chain_err(|| {
+                    ErrorKind::BackendCreationFailed("Failed to set UdpSocket to non-blocking mode")
+                })?;
+
         Ok(UdpBackend {
             socket: socket,
             destination: destination_addr,

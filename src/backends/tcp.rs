@@ -23,6 +23,10 @@ impl TcpBackend {
                     ErrorKind::BackendCreationFailed("Failed to establish TCP connection")
                 })?;
 
+        socket.set_nonblocking(true).chain_err(|| {
+                    ErrorKind::BackendCreationFailed("Failed to set TcpStream to non-blocking mode")
+                })?;
+
         Ok(TcpBackend {
             socket: sync::Arc::new(sync::Mutex::new(socket)),
             compression: MessageCompression::default(),
