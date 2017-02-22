@@ -24,7 +24,7 @@ version at [cargo.io](https://cargo.io/gelf):
 
 ```toml
 [dependencies]
-cadence = "a.b.c"
+gelf = "a.b.c"
 ```
 
 If you installed [`cargo-edit`](https://github.com/killercup/cargo-edit) you can easily add the latest
