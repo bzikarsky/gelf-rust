@@ -66,8 +66,8 @@ impl Logger {
 
     /// Log a message via the logger's transport to a GELF server.
     ///
-    /// The logger will automatically all `default_metadata` fields to the message
-    /// which are missing in the passed `Message`.
+    /// The logger will automatically add `default_metadata` fields to the message
+    /// if missing in the passed `Message`.
     pub fn log_message(&self, msg: Message) {
         let result = self.backend.log_message(WireMessage::new(msg, &self));
 
