@@ -122,7 +122,7 @@ impl<'a> Iterator for ChunkedMessageIterator<'a> {
 
         // Set the chunks boundaries
         let chunk_size = self.message.chunk_size.size();
-        let slice_start = (self.chunk_num as u16 * chunk_size) as usize;
+        let slice_start = (self.chunk_num as u32 * chunk_size as u32) as usize;
         let slice_end = cmp::min(slice_start + chunk_size as usize,
                                  self.message.payload.len());
 
@@ -299,6 +299,16 @@ mod tests {
     }
 
     #[test]
+    fn chunk_large_message_chunking() {
+        // 100k of msg
+        chunking(CHUNK_SIZE_WAN, 100000);
+    }
+
+    fn chunking(chunk_size: u16, msg_size: u32) {
+        check_chunks(chunk_size as u16, msg_size, (msg_size / chunk_size as u32) as u8 + 1);
+    }
+
+    #[test]
     #[should_panic]
     fn test_illegal_chunk_size() {
         ChunkedMessage::new(ChunkSize::Custom(0), get_data(1)).unwrap();
@@ -313,9 +323,11 @@ mod tests {
         data
     }
 
-    fn check_chunks(chunk_size: u8, msg_size: u8, expected_chunk_count: u8) {
+    fn check_chunks(chunk_size: u16, msg_size: u32, expected_chunk_count: u8) {
+        let msg_data = get_data(msg_size as usize);
+        let msg_data_clone = msg_data.clone();
         let msg = ChunkedMessage::new(ChunkSize::Custom(chunk_size as u16),
-                                      get_data(msg_size as usize))
+                                      msg_data)
             .unwrap();
         let mut counter: u8 = 0;
         for chunk in msg.iter() {
@@ -323,7 +335,7 @@ mod tests {
 
             // length is in budget
 
-            assert!(chunk.len() as u8 <= chunk_size + 12);
+            assert!(chunk.len() as u16 <= chunk_size + 12);
             // magic bytes
             assert_eq!(chunk[0], MAGIC_BYTES[0]);
             assert_eq!(chunk[1], MAGIC_BYTES[1]);
@@ -333,9 +345,11 @@ mod tests {
             assert_eq!(chunk[11], expected_chunk_count);
 
             // first and last byte
-            assert_eq!(chunk[12], counter * chunk_size);
+            let first_index = (counter as u32 * chunk_size as u32) as usize;
+            let last_index = (::std::cmp::min((counter as u32 + 1) * chunk_size as u32, msg_size) - 1) as usize;
+            assert_eq!(chunk[12], msg_data_clone[first_index]);
             assert_eq!(*chunk.last().unwrap(),
-                       ::std::cmp::min((counter + 1) * chunk_size, 100) - 1);
+                       msg_data_clone[last_index]);
 
             counter += 1;
         }
