@@ -135,7 +135,7 @@ impl<'a> From<&'a log::LogRecord<'a>> for Message<'a> {
     /// Create a `Message` from given `log::LogRecord` including all metadata
     fn from(record: &'a log::LogRecord) -> Message<'a> {
         // Create message with given text and level
-        let mut msg = Message::new(format!("{}", record.args()));
+        let mut msg = Message::new_with_level(format!("{}", record.args()), record.level().into());
 
         msg.set_timestamp(UTC::now());
 
