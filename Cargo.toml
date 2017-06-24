@@ -1,6 +1,6 @@
 [package]
 name = "gelf"
-version = "0.2.1"
+version = "0.2.2"
 authors = ["Benjamin Zikarsky <benjamin@zikarsky.de>"]
 description = "A library for logging GELF messages to a Graylog compatible server"
 repository = "https://github.com/bzikarsky/gelf-rust"
