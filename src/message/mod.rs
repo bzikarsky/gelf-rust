@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use chrono::{DateTime, UTC};
+use chrono::{DateTime, Utc};
 use log;
 
 use level::Level;
@@ -25,7 +25,7 @@ mod wire_message;
 pub struct Message<'a> {
     short_message: String,
     full_message: Option<String>,
-    timestamp: Option<DateTime<UTC>>,
+    timestamp: Option<DateTime<Utc>>,
     level: Level,
     metadata: HashMap<&'a str, String>,
 }
@@ -82,12 +82,12 @@ impl<'a> Message<'a> {
     }
 
     /// Return the `timestamp`
-    pub fn timestamp(&self) -> &Option<DateTime<UTC>> {
+    pub fn timestamp(&self) -> &Option<DateTime<Utc>> {
         &self.timestamp
     }
 
     /// Set the `timestamp`
-    pub fn set_timestamp(&mut self, ts: DateTime<UTC>) -> &mut Self {
+    pub fn set_timestamp(&mut self, ts: DateTime<Utc>) -> &mut Self {
         self.timestamp = Some(ts);
         self
     }
@@ -137,7 +137,7 @@ impl<'a> From<&'a log::LogRecord<'a>> for Message<'a> {
         // Create message with given text and level
         let mut msg = Message::new_with_level(format!("{}", record.args()), record.level().into());
 
-        msg.set_timestamp(UTC::now());
+        msg.set_timestamp(Utc::now());
 
         // Add location meta-data
         msg.metadata.insert("file", record.location().file().to_owned());
