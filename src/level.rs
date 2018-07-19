@@ -1,4 +1,4 @@
-use log::{LogLevel, LogLevelFilter};
+use log::{Level as LogLevel, LevelFilter as LogLevelFilter};
 
 /// GELF's representation of an error level
 ///
@@ -70,6 +70,6 @@ impl From<LogLevel> for Level {
 impl Into<LogLevelFilter> for Level {
     /// Allow for Into conversion from Rust's LogLevelFilter
     fn into(self) -> LogLevelFilter {
-        self.to_rust().to_log_level_filter()
+        self.to_rust().to_level_filter()
     }
 }

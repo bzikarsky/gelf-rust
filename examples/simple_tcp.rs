@@ -19,7 +19,7 @@ extern crate gelf;
 mod shared;
 
 use gelf::*;
-use log::LogLevelFilter;
+use log::LevelFilter as LogLevelFilter;
 use shared::*;
 
 /// Set a filter for log-messages. Messages below the defined level will be ignored

@@ -165,9 +165,9 @@ impl<'a > Message<'a> {
     }
 }
 
-impl<'a> From<&'a log::LogRecord<'a>> for Message<'a> {
+impl<'a> From<&'a log::Record<'a>> for Message<'a> {
     /// Create a `Message` from given `log::LogRecord` including all metadata
-    fn from(record: &'a log::LogRecord) -> Message<'a> {
+    fn from(record: &'a log::Record) -> Message<'a> {
         // Create message with given text and level
         let short_message = format!("{}", record.args());
 
@@ -180,9 +180,9 @@ impl<'a> From<&'a log::LogRecord<'a>> for Message<'a> {
 
         // Add default metadata, and ignore the results (`let _ = ...`) as all keys are valid
         // and set_metadata only fails on invalid keys
-        let _ = msg.set_metadata("file", record.location().file());
-        let _ = msg.set_metadata("line", record.location().line().to_string());
-        let _ = msg.set_metadata("module_path", record.location().module_path());
+        let _ = msg.set_metadata("file", record.file().unwrap_or("(none)").to_string());
+        let _ = msg.set_metadata("line", record.line().map(|v| v.to_string()).unwrap_or("(none)".into()));
+        let _ = msg.set_metadata("module_path", record.module_path().unwrap_or("(none)").to_string());
         let _ = msg.set_metadata("process_id", util::pid().to_string());
 
         msg

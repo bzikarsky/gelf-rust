@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use hostname;
 use log;
+use log::set_boxed_logger;
 
 use backends::Backend;
 use errors::{Error, Result};
@@ -59,11 +60,9 @@ impl Logger {
     ///
     /// Note that installing the logger consumes it. To uninstall you need to call
     /// `log::shutdown_logger` which returns the boxed, original `Logger` instance.
-    pub fn install<T: Into<log::LogLevelFilter>>(self, log_level: T) -> Result<()> {
-        log::set_logger(|max_level| {
-            max_level.set(Into::into(log_level));
-            Box::new(self)
-        })?;
+    pub fn install<T: Into<log::LevelFilter>>(self, log_level: T) -> Result<()> {
+        set_boxed_logger(Box::new(self))?;
+        log::set_max_level(log_level.into());
 
         Ok(())
     }
@@ -149,7 +148,7 @@ impl log::Log for Logger {
     ///
     /// See [docs](https://doc.rust-lang.org/log/log/trait.Log.html#tymethod.enabled)
     /// for more details
-    fn enabled(&self, _: &log::LogMetadata) -> bool {
+    fn enabled(&self, _: &log::Metadata) -> bool {
         // The logger does not dicard any log-level by itself, therefore it is
         // always enabled
         true
@@ -158,11 +157,13 @@ impl log::Log for Logger {
     /// Logs the `LogRecord`.
     /// See [docs](https://doc.rust-lang.org/log/log/trait.Log.html#tymethod.log)
     /// for more details
-    fn log(&self, record: &log::LogRecord) {
+    fn log(&self, record: &log::Record) {
         if !self.enabled(record.metadata()) {
             ()
         }
 
         self.log_message(From::from(record))
     }
+
+    fn flush(&self) {}
 }
