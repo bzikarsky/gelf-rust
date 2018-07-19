@@ -1,13 +1,13 @@
-use message::WireMessage;
 use errors::Result;
+use message::WireMessage;
 
-mod udp;
-mod tcp;
 mod null;
+mod tcp;
+mod udp;
 
-pub use self::udp::UdpBackend;
-pub use self::tcp::TcpBackend;
 pub use self::null::NullBackend;
+pub use self::tcp::TcpBackend;
+pub use self::udp::UdpBackend;
 
 /// A trait for a GELF backend
 ///

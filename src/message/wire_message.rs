@@ -1,12 +1,12 @@
-use std::collections::HashMap;
-
+use failure;
 use serde;
 use serde::ser::SerializeMap;
 use serde_json;
+use std::collections::HashMap;
 
-use message::{Message, ChunkSize, ChunkedMessage, MessageCompression};
-use errors::{Result, ErrorKind, ResultExt};
+use errors::{Error, Result};
 use logger::Logger;
+use message::{ChunkSize, ChunkedMessage, Message, MessageCompression};
 
 /// WireMessage is the representation of a fully assembled GELF message
 ///
@@ -28,7 +28,8 @@ impl<'a> WireMessage<'a> {
     /// fields which were not added to the message.
     pub fn new(mut msg: Message<'a>, logger: &'a Logger) -> Self {
         // Filter all fields missing from the message
-        let additionals_from_default: HashMap<&String, &String> = logger.default_metadata()
+        let additionals_from_default: HashMap<&String, &String> = logger
+            .default_metadata()
             .iter()
             .filter(|&(key, _)| !msg.metadata.contains_key(key.as_str()))
             .collect();
@@ -46,7 +47,11 @@ impl<'a> WireMessage<'a> {
 
     /// Return a GELF/JSON string of this message
     pub fn to_gelf(&self) -> Result<String> {
-        serde_json::to_string(self).chain_err(|| ErrorKind::SerializeMessageFailed)
+        serde_json::to_string(self).map_err(|e| {
+            failure::Error::from(e)
+                .context(Error::SerializeMessageFailed)
+                .into()
+        })
     }
 
     /// Return a compressed GELF/JSON string of this message
@@ -55,11 +60,11 @@ impl<'a> WireMessage<'a> {
     }
 
     /// Serialize the messages and prepare it for chunking
-    pub fn to_chunked_message(&self,
-                              chunk_size: ChunkSize,
-                              compression: MessageCompression)
-                              -> Result<ChunkedMessage> {
-
+    pub fn to_chunked_message(
+        &self,
+        chunk_size: ChunkSize,
+        compression: MessageCompression,
+    ) -> Result<ChunkedMessage> {
         ChunkedMessage::new(chunk_size, self.to_compressed_gelf(compression)?)
     }
 }
@@ -67,7 +72,8 @@ impl<'a> WireMessage<'a> {
 impl<'a> serde::Serialize for WireMessage<'a> {
     /// Serialize the message to a GELF/JSON string
     fn serialize<S>(&self, serializer: S) -> ::std::result::Result<S::Ok, S::Error>
-        where S: serde::Serializer
+    where
+        S: serde::Serializer,
     {
         let mut map = serializer.serialize_map(None)?;
 

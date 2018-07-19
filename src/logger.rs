@@ -1,11 +1,11 @@
 use std::collections::HashMap;
 
-use log;
 use hostname;
+use log;
 
 use backends::Backend;
+use errors::{Error, Result};
 use message::{Message, WireMessage};
-use errors::{Result, ErrorKind};
 
 /// Logger for sending log-messages
 ///
@@ -31,7 +31,11 @@ impl Logger {
     pub fn new(backend: Box<Backend>) -> Result<Self> {
         hostname::get_hostname()
             .map(|hostname| Logger::new_with_hostname(backend, &hostname))
-            .ok_or(ErrorKind::LoggerCreateFailed("Failed to determine local hostname").into())
+            .ok_or(
+                format_err!("Failed to determine local hostname")
+                    .context(Error::LoggerCreateFailed)
+                    .into(),
+            )
     }
 
     /// Construct a new `Logger` instance with predetermined hostname

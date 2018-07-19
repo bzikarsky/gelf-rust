@@ -1,9 +1,9 @@
-use std::io;
-
+use failure;
 use libflate::gzip;
 use libflate::zlib;
+use std::io;
 
-use errors::{Result, ErrorKind, ResultExt};
+use errors::{Error, Result};
 use message::WireMessage;
 
 /// MessageCompression represents all possible compression algorithms in GELF.
@@ -28,19 +28,29 @@ impl MessageCompression {
             MessageCompression::None => json.into_bytes(),
             MessageCompression::Gzip => {
                 let mut cursor = io::Cursor::new(json);
-                gzip::Encoder::new(Vec::new()).and_then(|mut encoder| {
+                gzip::Encoder::new(Vec::new())
+                    .and_then(|mut encoder| {
                         io::copy(&mut cursor, &mut encoder)
                             .and_then(|_| encoder.finish().into_result())
                     })
-                    .chain_err(|| ErrorKind::CompressMessageFailed("gzip"))?
+                    .map_err(|e| {
+                        failure::Error::from(e).context(Error::CompressMessageFailed {
+                            compression_method: "gzip",
+                        })
+                    })?
             }
             MessageCompression::Zlib => {
                 let mut cursor = io::Cursor::new(json);
-                zlib::Encoder::new(Vec::new()).and_then(|mut encoder| {
+                zlib::Encoder::new(Vec::new())
+                    .and_then(|mut encoder| {
                         io::copy(&mut cursor, &mut encoder)
                             .and_then(|_| encoder.finish().into_result())
                     })
-                    .chain_err(|| ErrorKind::CompressMessageFailed("zlib"))?
+                    .map_err(|e| {
+                        failure::Error::from(e).context(Error::CompressMessageFailed {
+                            compression_method: "zlib",
+                        })
+                    })?
             }
         })
     }

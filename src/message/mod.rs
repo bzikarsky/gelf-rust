@@ -1,12 +1,12 @@
-use std::collections::HashMap;
 use chrono::{DateTime, Utc};
 use log;
+use std::collections::HashMap;
 
+use errors::{Error, Result};
 use level::Level;
-use errors::{Result, ErrorKind};
 use util;
 
-pub use self::chunked_message::{ChunkedMessage, ChunkSize};
+pub use self::chunked_message::{ChunkSize, ChunkedMessage};
 pub use self::compression::MessageCompression;
 pub use self::wire_message::WireMessage;
 
@@ -122,7 +122,7 @@ impl<'a> Message<'a> {
     /// Set a metadata field with given key to value
     pub fn set_metadata(&mut self, key: &'a str, value: String) -> Result<&mut Self> {
         if key == "id" {
-            bail!(ErrorKind::IllegalNameForAdditional(String::from(key)));
+            return Err(Error::IllegalNameForAdditional { name: key.into() }.into());
         }
 
         self.metadata.insert(key, value);
@@ -140,9 +140,12 @@ impl<'a> From<&'a log::LogRecord<'a>> for Message<'a> {
         msg.set_timestamp(Utc::now());
 
         // Add location meta-data
-        msg.metadata.insert("file", record.location().file().to_owned());
-        msg.metadata.insert("line", record.location().line().to_string());
-        msg.metadata.insert("module_path", record.location().module_path().to_owned());
+        msg.metadata
+            .insert("file", record.location().file().to_owned());
+        msg.metadata
+            .insert("line", record.location().line().to_string());
+        msg.metadata
+            .insert("module_path", record.location().module_path().to_owned());
 
         // Add runtime meta-data
         msg.metadata.insert("process_id", util::pid().to_string());
