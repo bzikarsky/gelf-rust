@@ -86,8 +86,8 @@ impl Logger {
     }
 
     /// Set the hostname used for GELF's `host`-field
-    pub fn set_hostname(&mut self, hostname: String) -> &mut Self {
-        self.hostname = hostname;
+    pub fn set_hostname<S: Into<String>>(&mut self, hostname: S) -> &mut Self {
+        self.hostname = hostname.into();
         self
     }
 
@@ -113,8 +113,16 @@ impl Logger {
     /// logger.log_message(Message::new(String::from("This is important information")));
     /// // -> The message will contain an additional field "_facility" with the value "my_awesome_rust_service"
     /// ```
-    pub fn set_default_metadata(&mut self, key: String, value: String) -> &mut Self {
-        self.default_metadata.insert(key, value);
+    pub fn set_default_metadata<S, T>(
+        &mut self,
+        key: S,
+        value: T
+    ) -> &mut Self
+    where
+        S: Into<String>,
+        T: Into<String>
+    {
+        self.default_metadata.insert(key.into(), value.into());
         self
     }
 

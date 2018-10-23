@@ -36,7 +36,7 @@ impl<'a> WireMessage<'a> {
 
         // add the missing metadata
         for (key, value) in additionals_from_default {
-            msg.set_metadata(key.as_str(), value.clone()).ok();
+            msg.set_metadata(key.as_str(), value.as_str()).ok();
         }
 
         WireMessage {
@@ -84,7 +84,7 @@ impl<'a> serde::Serialize for WireMessage<'a> {
         map.serialize_value(self.host)?;
 
         map.serialize_key("short_message")?;
-        map.serialize_value(self.message.short_message())?;
+        map.serialize_value(&self.message.short_message())?;
 
         map.serialize_key("level")?;
         let level = self.message.level as u8;

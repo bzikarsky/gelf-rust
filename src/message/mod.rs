@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+use std::borrow::Cow;
 use chrono::{DateTime, Utc};
 use log;
 use std::collections::HashMap;
@@ -23,29 +25,40 @@ mod wire_message;
 /// A `Message` can also be constructed from a `log::LogRecord`. All
 /// available metadata is transferred over to the message object.
 pub struct Message<'a> {
-    short_message: String,
-    full_message: Option<String>,
+    short_message: Cow<'a, str>,
+    full_message: Option<Cow<'a, str>>,
     timestamp: Option<DateTime<Utc>>,
     level: Level,
-    metadata: HashMap<&'a str, String>,
+    metadata: HashMap<Cow<'a, str>, Cow<'a, str>>,
 }
 
-impl<'a> Message<'a> {
+impl<'a > Message<'a> {
     /// Construct a new log message.
     ///
     /// All fields will use their defaults. This means usually Option::None.
     /// A notable exception is `level`. The GELF spec requires this field to
     /// default to Level::Alert.
-    pub fn new(short_message: String) -> Self {
+    pub fn new<S>(
+        short_message: S,
+    ) -> Self
+    where
+        S: Into<Cow<'a, str>> + AsRef<str>
+    {
         Self::new_with_level(short_message, Level::Alert)
     }
 
     /// Construct a new log message with a defined level
     ///
     /// All fields will use their defaults. This means usually Option::None.
-    pub fn new_with_level(short_message: String, level: Level) -> Self {
+    pub fn new_with_level<S>(
+        short_message: S,
+        level: Level
+    ) -> Self
+    where
+        S: Into<Cow<'a, str>> + AsRef<str>
+    {
         Message {
-            short_message: short_message,
+            short_message: short_message.into(),
             level: level,
             full_message: None,
             timestamp: None,
@@ -54,24 +67,36 @@ impl<'a> Message<'a> {
     }
 
     /// Return the `short_message`
-    pub fn short_message(&self) -> &String {
+    pub fn short_message(&self) -> &Cow<'a, str> {
         &self.short_message
     }
 
     /// Set the `short_message`
-    pub fn set_short_message(&mut self, msg: String) -> &mut Self {
-        self.short_message = msg;
+    pub fn set_short_message<S>(
+        &mut self,
+        msg: S
+    ) -> &mut Self
+    where
+        S: Into<Cow<'a, str>> + AsRef<str>
+    {
+        self.short_message = msg.into();
         self
     }
 
     /// Return the `full_message`
-    pub fn full_message(&self) -> &Option<String> {
+    pub fn full_message(&self) -> &Option<Cow<'a, str>> {
         &self.full_message
     }
 
     /// Set the `full_message`
-    pub fn set_full_message(&mut self, msg: String) -> &mut Self {
-        self.full_message = Some(msg);
+    pub fn set_full_message<S>(
+        &mut self,
+        msg: S
+    ) -> &mut Self
+    where
+        S: Into<Cow<'a, str>> + AsRef<str>
+    {
+        self.full_message = Some(msg.into());
         self
     }
 
@@ -110,22 +135,32 @@ impl<'a> Message<'a> {
     }
 
     /// Return a metadata field with given key
-    pub fn metadata(&self, key: &str) -> Option<&String> {
+    pub fn metadata(&self, key: &'a str) -> Option<&Cow<'a, str>> {
         self.metadata.get(key)
     }
 
     /// Return all metadata
-    pub fn all_metadata(&self) -> &HashMap<&'a str, String> {
+    pub fn all_metadata(&self) -> &HashMap<Cow<'a, str>, Cow<'a, str>> {
         &self.metadata
     }
 
     /// Set a metadata field with given key to value
-    pub fn set_metadata(&mut self, key: &'a str, value: String) -> Result<&mut Self> {
+    pub fn set_metadata<S, T>(
+        &mut self,
+        key: S,
+        value: T
+    ) -> Result<&mut Self>
+    where
+        S: Into<Cow<'a, str>> + AsRef<str>,
+        T: Into<Cow<'a, str>> + AsRef<str>,
+    {
+        let key = key.into();
+
         if key == "id" {
             return Err(Error::IllegalNameForAdditional { name: key.into() }.into());
         }
 
-        self.metadata.insert(key, value);
+        self.metadata.insert(key.into(), value.into());
 
         Ok(self)
     }
@@ -135,17 +170,22 @@ impl<'a> From<&'a log::LogRecord<'a>> for Message<'a> {
     /// Create a `Message` from given `log::LogRecord` including all metadata
     fn from(record: &'a log::LogRecord) -> Message<'a> {
         // Create message with given text and level
-        let mut msg = Message::new_with_level(format!("{}", record.args()), record.level().into());
+        let short_message = format!("{}", record.args());
+
+        let mut msg = Message::new_with_level(
+            short_message,
+            record.level().into()
+        );
 
         msg.set_timestamp(Utc::now());
 
-        // Add location meta-data
         msg.metadata
-            .insert("file", record.location().file().to_owned());
+            .insert("file", record.location().file());
         msg.metadata
             .insert("line", record.location().line().to_string());
         msg.metadata
-            .insert("module_path", record.location().module_path().to_owned());
+            .insert("module_path", record.location().module_path());
+
 
         // Add runtime meta-data
         msg.metadata.insert("process_id", util::pid().to_string());
