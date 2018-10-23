@@ -1,10 +1,12 @@
-use std::net;
+use failure;
+use failure::Fail;
 use std::io::Write;
+use std::net;
 use std::sync;
 
 use backends::Backend;
-use message::{WireMessage, MessageCompression};
-use errors::{Result, ErrorKind, ResultExt};
+use errors::{Error, Result};
+use message::{MessageCompression, WireMessage};
 
 /// TcpBackend is a simple GELF over TCP backend.
 ///
@@ -18,14 +20,16 @@ pub struct TcpBackend {
 impl TcpBackend {
     /// Construct a new TcpBackend.
     pub fn new<T: net::ToSocketAddrs>(destination: T) -> Result<TcpBackend> {
-        let socket =
-            net::TcpStream::connect(destination).chain_err(|| {
-                    ErrorKind::BackendCreationFailed("Failed to establish TCP connection")
-                })?;
+        let socket = net::TcpStream::connect(destination).map_err(|e| {
+            failure::Error::from(e)
+                .context("Failed to establish TCP connection")
+                .context(Error::BackendCreationFailed)
+        })?;
 
-        socket.set_nonblocking(true).chain_err(|| {
-                    ErrorKind::BackendCreationFailed("Failed to set TcpStream to non-blocking mode")
-                })?;
+        socket.set_nonblocking(true).map_err(|e| {
+            e.context("Failed to set TcpStream to non-blocking mode")
+                .context(Error::BackendCreationFailed)
+        })?;
 
         Ok(TcpBackend {
             socket: sync::Arc::new(sync::Mutex::new(socket)),
@@ -55,7 +59,11 @@ impl Backend for TcpBackend {
 
         let mut socket = self.socket.lock().unwrap();
 
-        socket.write_all(&msg).chain_err(|| ErrorKind::LogTransmitFailed)
+        socket
+            .write_all(&msg)
+            .map_err(|e| e.context(Error::LogTransmitFailed))?;
+
+        Ok(())
     }
 }
 
@@ -65,7 +73,8 @@ impl Drop for TcpBackend {
         // When drop() is called unwrap() should never fail
         let mut socket = self.socket.lock().unwrap();
 
-        socket.flush()
+        socket
+            .flush()
             .and_then(|_| socket.shutdown(net::Shutdown::Both))
             .unwrap_or_else(|_| warn!("Failed to flush and shutdown tcp socket cleanly"));
     }

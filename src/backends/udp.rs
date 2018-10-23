@@ -1,8 +1,10 @@
+use failure;
+use failure::Fail;
 use std::net;
 
 use backends::Backend;
-use message::{WireMessage, MessageCompression, ChunkSize};
-use errors::{Result, ErrorKind, ResultExt};
+use errors::{Error, Result};
+use message::{ChunkSize, MessageCompression, WireMessage};
 
 /// UdpBackend is the default and standard GELF backend
 ///
@@ -25,17 +27,23 @@ impl UdpBackend {
     }
 
     /// Construct an new UdpBackend with the given chunk-size
-    pub fn new_with_chunksize<T: net::ToSocketAddrs>(destination: T,
-                                                     chunk_size: ChunkSize)
-                                                     -> Result<UdpBackend> {
+    pub fn new_with_chunksize<T: net::ToSocketAddrs>(
+        destination: T,
+        chunk_size: ChunkSize,
+    ) -> Result<UdpBackend> {
         // Get a single net::SocketAddr form the destination-address type
-        let destination_addr =
-            destination.to_socket_addrs()
-                .chain_err(|| {
-                    ErrorKind::BackendCreationFailed("Failed to parse a destination address")
-                })?
-                .nth(0)
-                .ok_or(ErrorKind::BackendCreationFailed("Invalid destination server address"))?;
+        let destination_addr = destination
+            .to_socket_addrs()
+            .map_err(|e| {
+                failure::Error::from(e)
+                    .context("Failed to parse a destination address")
+                    .context(Error::BackendCreationFailed)
+            })?
+            .nth(0)
+            .ok_or(
+                format_err!("Invalid destination server address",)
+                    .context(Error::BackendCreationFailed),
+            )?;
 
         // Create an appropiate local socket for the given destination
         let local = match destination_addr {
@@ -43,13 +51,15 @@ impl UdpBackend {
             net::SocketAddr::V6(_) => "[::]:0",
         };
 
-        let socket = net::UdpSocket::bind(local).chain_err(|| {
-                ErrorKind::BackendCreationFailed("Failed to bind local socket")
-            })?;
+        let socket = net::UdpSocket::bind(local).map_err(|e| {
+            e.context("Failed to bind local socket")
+                .context(Error::BackendCreationFailed)
+        })?;
 
-        socket.set_nonblocking(true).chain_err(|| {
-                    ErrorKind::BackendCreationFailed("Failed to set UdpSocket to non-blocking mode")
-                })?;
+        socket.set_nonblocking(true).map_err(|e| {
+            e.context("Failed to set UdpSocket to non-blocking mode")
+                .context(Error::BackendCreationFailed)
+        })?;
 
         Ok(UdpBackend {
             socket: socket,
@@ -76,15 +86,18 @@ impl Backend for UdpBackend {
     fn log_message(&self, msg: WireMessage) -> Result<()> {
         let chunked_msg = msg.to_chunked_message(self.chunk_size, self.compression)?;
         let chunked_msg_size = chunked_msg.len();
-        let sent_bytes = chunked_msg.iter()
-            .map(|chunk| match self.socket.send_to(&chunk, self.destination) {
-                Err(_) => 0,
-                Ok(size) => size,
-            })
+        let sent_bytes = chunked_msg
+            .iter()
+            .map(
+                |chunk| match self.socket.send_to(&chunk, self.destination) {
+                    Err(_) => 0,
+                    Ok(size) => size,
+                },
+            )
             .fold(0_u64, |carry, size| carry + size as u64);
 
         if sent_bytes != chunked_msg_size {
-            bail!(ErrorKind::LogTransmitFailed);
+            bail!(Error::LogTransmitFailed);
         }
 
         Ok(())

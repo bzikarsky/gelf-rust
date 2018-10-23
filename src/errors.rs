@@ -1,40 +1,24 @@
-error_chain!{ 
-    foreign_links {
-        LoggerInitFailed(::log::SetLoggerError);
-    }
+use failure;
+use std;
 
-    errors {
-        BackendCreationFailed(t: &'static str) {
-            description("Failed to create a GELF backend")
-            display("Failed to create the GELF backend: {}", t)
-        }
-        IllegalNameForAdditional(t: String) {
-            description("The specified name is not a legal name for an additional GELF field")
-            display("'{}' is not a legal name for an additional GELF field", t)
-        }
-        LoggerCreateFailed(t: &'static str) {
-            description("Failed to create the GELF logger")
-            display("Failed to create the GELF logger: {}", t)
-        }
-        LogTransmitFailed {
-            description("Failed to create a GELF log message")
-            display("Failed to create a GELF log message")
-        }
-        CompressMessageFailed(t: &'static str) {
-            description("Failed to compress the message")
-            display("Failed to compress the message with'{}'", t)
-        }
-        SerializeMessageFailed {
-            description("Failed to serialize the message to GELF json")
-            display("Failed to serialize the message to GELF json")
-        }
-        ChunkMessageFailed(t: &'static str) {
-            description("Failed to chunk the message")
-            display("Failed to chunk the message: {}", t)
-        }
-        IllegalChunkSize(t: u16) {
-            description("Illegal chunk size")
-            display("Illegal chunk size: {}", t)
-        }
-    }
+#[derive(Clone, Debug, Fail)]
+pub enum Error {
+    #[fail(display = "Failed to create the GELF backend")]
+    BackendCreationFailed,
+    #[fail(display = "'{}' is not a legal name for an additional GELF field", name)]
+    IllegalNameForAdditional { name: String },
+    #[fail(display = "Failed to create the GELF logger")]
+    LoggerCreateFailed,
+    #[fail(display = "Failed to create a GELF log message")]
+    LogTransmitFailed,
+    #[fail(display = "Failed to compress the message with '{}'", compression_method)]
+    CompressMessageFailed { compression_method: &'static str },
+    #[fail(display = "Failed to serialize the message to GELF json")]
+    SerializeMessageFailed,
+    #[fail(display = "Failed to chunk the message")]
+    ChunkMessageFailed,
+    #[fail(display = "Illegal chunk size: {}", size)]
+    IllegalChunkSize { size: u16 },
 }
+
+pub type Result<T> = std::result::Result<T, failure::Error>;

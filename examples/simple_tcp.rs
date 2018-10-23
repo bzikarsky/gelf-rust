@@ -3,7 +3,7 @@
 //! By default the example tries to start a debug GELF server which logs the
 //! GELF JSON messages to STDOUT. If you want to run your own debug output (or
 //! log to a Graylog instance) you can disable the debug server by passing the
-//! "--no-server" argument to the example run. E.g.: 
+//! "--no-server" argument to the example run. E.g.:
 //!
 //! `cargo run --example simple_tcp -- --no-server`
 //!
@@ -19,8 +19,8 @@ extern crate gelf;
 mod shared;
 
 use gelf::*;
-use shared::*;
 use log::LogLevelFilter;
+use shared::*;
 
 /// Set a filter for log-messages. Messages below the defined level will be ignored
 const LOG_FILTER: LogLevelFilter = LogLevelFilter::Trace;
@@ -38,7 +38,7 @@ fn main() {
     // - run_debug_server: Whether the example should run its own debug server
     let mut options = Options {
         gelf_host: String::from("127.0.0.1:12201"),
-        run_debug_server: true
+        run_debug_server: true,
     };
 
     // Read command line options
@@ -48,7 +48,7 @@ fn main() {
     let thread = if options.run_debug_server {
         let host = options.gelf_host.clone();
         let handle = Some(::std::thread::spawn(|| {
-            run_debug_server_tcp(host, 5); 
+            run_debug_server_tcp(host, 5);
         }));
 
         // Wait for the server to start
@@ -59,7 +59,8 @@ fn main() {
     };
 
     // Create a UDP backend for given host and chunk_size
-    let mut backend = TcpBackend::new(options.gelf_host.as_str()).expect("Failed to create a TCP backend");
+    let mut backend =
+        TcpBackend::new(options.gelf_host.as_str()).expect("Failed to create a TCP backend");
 
     // Configure compression (can be ommited, defaults to Gzip)
     backend.set_compression(MESSAGE_COMPRESSION);
@@ -72,14 +73,20 @@ fn main() {
 
     // Add an example metadata field which is added to every message which does not contain
     // the key already
-    logger.set_default_metadata(String::from("facility"),
-                                String::from(::std::env::current_exe()
-                                    .unwrap()
-                                    .as_path()
-                                    .to_string_lossy()));
+    logger.set_default_metadata(
+        String::from("facility"),
+        String::from(
+            ::std::env::current_exe()
+                .unwrap()
+                .as_path()
+                .to_string_lossy(),
+        ),
+    );
 
     // Install the logger as a system logger
-    logger.install(LOG_FILTER).expect("Failed to install the logger");
+    logger
+        .install(LOG_FILTER)
+        .expect("Failed to install the logger");
 
     // Log! Go!
     trace!("trace");
@@ -90,6 +97,8 @@ fn main() {
 
     // Wait for a possible debug log server to shutdown
     if let Some(handle) = thread {
-        handle.join().expect("Failed to shutdown debug graylog server");
+        handle
+            .join()
+            .expect("Failed to shutdown debug graylog server");
     }
 }

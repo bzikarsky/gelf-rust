@@ -2,7 +2,7 @@ use std::cmp;
 
 use rand;
 
-use errors::{Result, ErrorKind};
+use errors::{Error, Result};
 
 /// Overhead per chunk is 12 bytes: magic(2) + id(8) + pos(1) + total (1)
 const CHUNK_OVERHEAD: u8 = 12;
@@ -52,9 +52,10 @@ impl ChunkedMessage {
     /// - chunk_size must be greater than 0
     /// - GELF allows for a maximum of 128 chunks per message
     pub fn new(chunk_size: ChunkSize, message: Vec<u8>) -> Result<ChunkedMessage> {
-
         if chunk_size.size() == 0 {
-            bail!(ErrorKind::IllegalChunkSize(chunk_size.size()));
+            return Err(Error::IllegalChunkSize {
+                size: chunk_size.size(),
+            }.into());
         }
 
         // Ceiled integer division with (a + b - 1) / b
@@ -63,9 +64,7 @@ impl ChunkedMessage {
         let num_chunks = (message.len() as u64 + size as u64 - 1) / size;
 
         if num_chunks > 128 {
-            bail!(ErrorKind::ChunkMessageFailed("Number of chunks exceeds 128, which the the \
-                                                 maximum number of chunks in GELF. Check your \
-                                                 chunk_size"))
+            return Err(format_err!("Number of chunks exceeds 128, which the the maximum number of chunks in GELF. Check your chunk_size").context(Error::ChunkMessageFailed).into());
         }
 
         Ok(ChunkedMessage {
@@ -123,8 +122,10 @@ impl<'a> Iterator for ChunkedMessageIterator<'a> {
         // Set the chunks boundaries
         let chunk_size = self.message.chunk_size.size();
         let slice_start = (self.chunk_num as u32 * chunk_size as u32) as usize;
-        let slice_end = cmp::min(slice_start + chunk_size as usize,
-                                 self.message.payload.len());
+        let slice_end = cmp::min(
+            slice_start + chunk_size as usize,
+            self.message.payload.len(),
+        );
 
         // The chunk header is only required when the message size exceeds one chunk
         if self.message.num_chunks > 1 {
@@ -200,14 +201,16 @@ mod tests {
 
     #[test]
     fn chunked_message_id_from_and_to_bytes() {
-        let raw_ids = vec![b"\xff\xff\xff\xff\xff\xff\xff\xff",
-                           b"\x00\x00\x00\x00\x00\x00\x00\x00",
-                           b"\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa",
-                           b"\x55\x55\x55\x55\x55\x55\x55\x55",
-                           b"\x00\x01\x02\x03\x04\x05\x06\x07",
-                           b"\x07\x06\x05\x04\x03\x02\x01\x00",
-                           b"\x00\x10\x20\x30\x40\x50\x60\x70",
-                           b"\x70\x60\x50\x40\x30\x20\x10\x00"];
+        let raw_ids = vec![
+            b"\xff\xff\xff\xff\xff\xff\xff\xff",
+            b"\x00\x00\x00\x00\x00\x00\x00\x00",
+            b"\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa",
+            b"\x55\x55\x55\x55\x55\x55\x55\x55",
+            b"\x00\x01\x02\x03\x04\x05\x06\x07",
+            b"\x07\x06\x05\x04\x03\x02\x01\x00",
+            b"\x00\x10\x20\x30\x40\x50\x60\x70",
+            b"\x70\x60\x50\x40\x30\x20\x10\x00",
+        ];
 
         for raw_id in raw_ids {
             let id = ChunkedMessageId::from_bytes(raw_id.clone());
@@ -217,14 +220,16 @@ mod tests {
 
     #[test]
     fn chunked_message_id_from_and_to_int() {
-        let raw_ids = vec![0xffffffffffffffff,
-                           0x0000000000000000,
-                           0xaaaaaaaaaaaaaaaa,
-                           0x5555555555555555,
-                           0x0001020304050607,
-                           0x0706050403020100,
-                           0x0010203040506070,
-                           0x7060504030201000];
+        let raw_ids = vec![
+            0xffffffffffffffff,
+            0x0000000000000000,
+            0xaaaaaaaaaaaaaaaa,
+            0x5555555555555555,
+            0x0001020304050607,
+            0x0706050403020100,
+            0x0010203040506070,
+            0x7060504030201000,
+        ];
 
         for raw_id in raw_ids {
             let id = ChunkedMessageId::from_int(raw_id);
@@ -246,8 +251,10 @@ mod tests {
 
         assert_eq!(msg_1_chunk.len(), 1);
         assert_eq!(msg_2_chunks.len() as u32, 2 + 2 * CHUNK_OVERHEAD as u32);
-        assert_eq!(msg_128_chunks.len() as u64,
-                   128 + 128 * (CHUNK_OVERHEAD as u64));
+        assert_eq!(
+            msg_128_chunks.len() as u64,
+            128 + 128 * (CHUNK_OVERHEAD as u64)
+        );
     }
 
     #[test]
@@ -305,7 +312,11 @@ mod tests {
     }
 
     fn chunking(chunk_size: u16, msg_size: u32) {
-        check_chunks(chunk_size as u16, msg_size, (msg_size / chunk_size as u32) as u8 + 1);
+        check_chunks(
+            chunk_size as u16,
+            msg_size,
+            (msg_size / chunk_size as u32) as u8 + 1,
+        );
     }
 
     #[test]
@@ -326,9 +337,7 @@ mod tests {
     fn check_chunks(chunk_size: u16, msg_size: u32, expected_chunk_count: u8) {
         let msg_data = get_data(msg_size as usize);
         let msg_data_clone = msg_data.clone();
-        let msg = ChunkedMessage::new(ChunkSize::Custom(chunk_size as u16),
-                                      msg_data)
-            .unwrap();
+        let msg = ChunkedMessage::new(ChunkSize::Custom(chunk_size as u16), msg_data).unwrap();
         let mut counter: u8 = 0;
         for chunk in msg.iter() {
             println!("{:?}", chunk);
@@ -346,10 +355,10 @@ mod tests {
 
             // first and last byte
             let first_index = (counter as u32 * chunk_size as u32) as usize;
-            let last_index = (::std::cmp::min((counter as u32 + 1) * chunk_size as u32, msg_size) - 1) as usize;
+            let last_index =
+                (::std::cmp::min((counter as u32 + 1) * chunk_size as u32, msg_size) - 1) as usize;
             assert_eq!(chunk[12], msg_data_clone[first_index]);
-            assert_eq!(*chunk.last().unwrap(),
-                       msg_data_clone[last_index]);
+            assert_eq!(*chunk.last().unwrap(), msg_data_clone[last_index]);
 
             counter += 1;
         }
