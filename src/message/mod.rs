@@ -2,7 +2,6 @@ use std::collections::HashMap;
 use std::borrow::Cow;
 use chrono::{DateTime, Utc};
 use log;
-use std::collections::HashMap;
 
 use errors::{Error, Result};
 use level::Level;
@@ -59,7 +58,7 @@ impl<'a > Message<'a> {
     {
         Message {
             short_message: short_message.into(),
-            level: level,
+            level,
             full_message: None,
             timestamp: None,
             metadata: HashMap::new(),
@@ -179,16 +178,12 @@ impl<'a> From<&'a log::LogRecord<'a>> for Message<'a> {
 
         msg.set_timestamp(Utc::now());
 
-        msg.metadata
-            .insert("file", record.location().file());
-        msg.metadata
-            .insert("line", record.location().line().to_string());
-        msg.metadata
-            .insert("module_path", record.location().module_path());
-
-
-        // Add runtime meta-data
-        msg.metadata.insert("process_id", util::pid().to_string());
+        // Add default metadata, and ignore the results (`let _ = ...`) as all keys are valid
+        // and set_metadata only fails on invalid keys
+        let _ = msg.set_metadata("file", record.location().file());
+        let _ = msg.set_metadata("line", record.location().line().to_string());
+        let _ = msg.set_metadata("module_path", record.location().module_path());
+        let _ = msg.set_metadata("process_id", util::pid().to_string());
 
         msg
     }
