@@ -96,8 +96,11 @@ impl<'a> serde::Serialize for WireMessage<'a> {
         }
 
         if self.message.timestamp().is_some() {
+            let datetime = &self.message.timestamp().unwrap();
+            let value = format!("{}.{}", datetime.timestamp(), datetime.timestamp_subsec_millis());
+
             map.serialize_key("timestamp")?;
-            map.serialize_value(&self.message.timestamp().unwrap().timestamp())?;
+            map.serialize_value(&value)?;
         }
 
         for (key, value) in self.message.all_metadata().iter() {
