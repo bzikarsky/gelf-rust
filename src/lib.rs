@@ -100,6 +100,8 @@ extern crate libc;
 extern crate libflate;
 extern crate rand;
 extern crate serde;
+
+#[cfg_attr(test, macro_use)]
 extern crate serde_json;
 
 #[macro_use]

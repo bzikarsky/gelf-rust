@@ -112,3 +112,46 @@ impl<'a> serde::Serialize for WireMessage<'a> {
         map.end()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use chrono::{TimeZone, Utc};
+    use level::Level;
+
+    #[test]
+    fn wire_message_serialization() {
+        let mut message = Message::new_with_level("short", Level::Alert);
+        message.set_full_message("full");
+
+        let datetime = Utc.ymd(2000, 1, 1).and_hms_micro(1, 2, 3, 123_456);
+        message.set_timestamp(datetime);
+
+        message.set_metadata("key1", "value1").unwrap();
+        message.set_metadata("key2", "value2").unwrap();
+
+        let wire_msg = WireMessage {
+            host: "host_value",
+            message,
+        };
+
+        let json = serde_json::to_value(wire_msg).expect("Failed to serialize WireMessage");
+
+        assert_eq!(Some(json!("1.1")), json.get("version").cloned());
+        assert_eq!(Some(json!("host_value")), json.get("host").cloned());
+        assert_eq!(Some(json!("short")), json.get("short_message").cloned());
+        assert_eq!(Some(json!("full")), json.get("full_message").cloned());
+        assert_eq!(Some(json!(1)), json.get("level").cloned()); // Level::Alert = 1
+
+        let timestamp_secs = datetime.timestamp();
+        let expected_timestamp = format!("{}.{}", timestamp_secs, 123);
+        assert_eq!(
+            Some(json!(&expected_timestamp)),
+            json.get("timestamp").cloned()
+        );
+
+        assert_eq!(Some(json!("value1")), json.get("_key1").cloned());
+        assert_eq!(Some(json!("value2")), json.get("_key2").cloned());
+    }
+}
