@@ -6,15 +6,16 @@ use std::sync;
 
 use backends::Backend;
 use errors::{Error, Result};
-use message::{MessageCompression, WireMessage};
+use message::WireMessage;
 
 /// TcpBackend is a simple GELF over TCP backend.
 ///
 /// WireMessages are simply serialized and optionally compressed and pushed to
 /// a Gelf host over TCP. TCP's stream-based nature requires no chunking.
+/// GELF over TCP does not support any type of compression, due to the use of
+/// the null byte as a frame delimiter.
 pub struct TcpBackend {
     socket: sync::Arc<sync::Mutex<net::TcpStream>>,
-    compression: MessageCompression,
 }
 
 impl TcpBackend {
@@ -33,26 +34,14 @@ impl TcpBackend {
 
         Ok(TcpBackend {
             socket: sync::Arc::new(sync::Mutex::new(socket)),
-            compression: MessageCompression::default(),
         })
-    }
-
-    /// Return the current set compression algorithm
-    pub fn compression(&self) -> MessageCompression {
-        self.compression
-    }
-
-    /// Set the compression algorithm
-    pub fn set_compression(&mut self, compression: MessageCompression) -> &mut Self {
-        self.compression = compression;
-        self
     }
 }
 
 impl Backend for TcpBackend {
     /// Log a message over TCP.
     fn log_message(&self, msg: WireMessage) -> Result<()> {
-        let mut msg = msg.to_compressed_gelf(self.compression)?;
+        let mut msg: Vec<u8> = msg.to_gelf()?.into();
 
         // raw messages need to be terminated with a 0-byte
         msg.push(0x00);

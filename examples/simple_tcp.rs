@@ -25,10 +25,6 @@ use shared::*;
 /// Set a filter for log-messages. Messages below the defined level will be ignored
 const LOG_FILTER: LogLevelFilter = LogLevelFilter::Trace;
 
-/// Set the compression used for the messages. Compression is
-/// disabled for readable examples
-const MESSAGE_COMPRESSION: MessageCompression = MessageCompression::None;
-
 /// Set the hostname which should be used in the GELF messages
 static HOSTNAME: &'static str = "test.local";
 
@@ -59,11 +55,8 @@ fn main() {
     };
 
     // Create a UDP backend for given host and chunk_size
-    let mut backend =
+    let backend =
         TcpBackend::new(options.gelf_host.as_str()).expect("Failed to create a TCP backend");
-
-    // Configure compression (can be ommited, defaults to Gzip)
-    backend.set_compression(MESSAGE_COMPRESSION);
 
     // Create the logger with the given backend
     let mut logger = Logger::new(Box::new(backend)).expect("Failed to create the logger");
