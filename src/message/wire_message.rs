@@ -95,9 +95,8 @@ impl<'a> serde::Serialize for WireMessage<'a> {
             map.serialize_value(&self.message.full_message())?;
         }
 
-        if self.message.timestamp().is_some() {
-            let datetime = &self.message.timestamp().unwrap();
-            let value = format!("{}.{}", datetime.timestamp(), datetime.timestamp_subsec_millis());
+        if let Some(datetime) = self.message.timestamp() {
+            let value = datetime.timestamp_millis() as f64 / 1000.0;
 
             map.serialize_key("timestamp")?;
             map.serialize_value(&value)?;
@@ -125,7 +124,7 @@ mod tests {
         let mut message = Message::new_with_level("short", Level::Alert);
         message.set_full_message("full");
 
-        let datetime = Utc.ymd(2000, 1, 1).and_hms_micro(1, 2, 3, 123_456);
+        let datetime = Utc.ymd(2000, 1, 1).and_hms_micro(1, 2, 3, 12_345);
         message.set_timestamp(datetime);
 
         message.set_metadata("key1", "value1").unwrap();
@@ -145,7 +144,7 @@ mod tests {
         assert_eq!(Some(json!(1)), json.get("level").cloned()); // Level::Alert = 1
 
         let timestamp_secs = datetime.timestamp();
-        let expected_timestamp = format!("{}.{}", timestamp_secs, 123);
+        let expected_timestamp = timestamp_secs as f64 + 0.012;
         assert_eq!(
             Some(json!(&expected_timestamp)),
             json.get("timestamp").cloned()
