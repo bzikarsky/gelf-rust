@@ -17,7 +17,7 @@ use message::{Message, WireMessage};
 /// to panic when an error occurs, you can change the behaviour with `Logger::enable_panic_on_error`.
 pub struct Logger {
     hostname: String,
-    backend: Box<Backend>,
+    backend: Box<dyn Backend>,
     default_metadata: HashMap<String, String>,
     panic_on_error: bool,
 }
@@ -29,7 +29,7 @@ impl Logger {
     /// This constructor tries to determine the local hostname (required by GELF)
     /// with the help of the `hostname`-crate. If you want to set a custom hostname
     /// check out the `Logger::new_with_hostname` constructor.
-    pub fn new(backend: Box<Backend>) -> Result<Self> {
+    pub fn new(backend: Box<dyn Backend>) -> Result<Self> {
         hostname::get_hostname()
             .map(|hostname| Logger::new_with_hostname(backend, &hostname))
             .ok_or(
@@ -43,7 +43,7 @@ impl Logger {
     ///
     /// The backend needs to be boxed for usage as a logger with the `log`-crate. It
     /// uses the passed hostname for the GELF `host` field
-    pub fn new_with_hostname(backend: Box<Backend>, hostname: &str) -> Logger {
+    pub fn new_with_hostname(backend: Box<dyn Backend>, hostname: &str) -> Logger {
         Logger {
             hostname: String::from(hostname),
             backend: backend,
