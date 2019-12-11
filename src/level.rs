@@ -33,8 +33,8 @@ pub enum Level {
 
 impl Level {
     /// Get the GELF error level from given Rust error level
-    pub fn from_rust(level: &LogLevel) -> Level {
-        match *level {
+    pub fn from_rust(level: LogLevel) -> Level {
+        match level {
             LogLevel::Error => Level::Error,
             LogLevel::Warn => Level::Warning,
             LogLevel::Info => Level::Informational,
@@ -43,8 +43,8 @@ impl Level {
     }
 
     /// Get the Rust error level from this GELF error level
-    pub fn to_rust(&self) -> LogLevel {
-        match *self {
+    pub fn to_rust(self) -> LogLevel {
+        match self {
             Level::Emergency | Level::Alert | Level::Critical | Level::Error => LogLevel::Error,
             Level::Warning => LogLevel::Warn,
             Level::Notice | Level::Informational => LogLevel::Info,
@@ -63,7 +63,7 @@ impl Into<LogLevel> for Level {
 impl From<LogLevel> for Level {
     /// Allow for Into conversion from Rust's LogLevel
     fn from(level: LogLevel) -> Level {
-        Level::from_rust(&level)
+        Level::from_rust(level)
     }
 }
 

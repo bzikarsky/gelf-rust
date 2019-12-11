@@ -159,7 +159,7 @@ impl<'a > Message<'a> {
             return Err(Error::IllegalNameForAdditional { name: key.into() }.into());
         }
 
-        self.metadata.insert(key.into(), value.into());
+        self.metadata.insert(key, value.into());
 
         Ok(self)
     }
@@ -181,7 +181,7 @@ impl<'a> From<&'a log::Record<'a>> for Message<'a> {
         // Add default metadata, and ignore the results (`let _ = ...`) as all keys are valid
         // and set_metadata only fails on invalid keys
         let _ = msg.set_metadata("file", record.file().unwrap_or("(none)").to_string());
-        let _ = msg.set_metadata("line", record.line().map(|v| v.to_string()).unwrap_or("(none)".into()));
+        let _ = msg.set_metadata("line", record.line().map(|v| v.to_string()).unwrap_or_else(|| "(none)".into()));
         let _ = msg.set_metadata("module_path", record.module_path().unwrap_or("(none)").to_string());
         let _ = msg.set_metadata("process_id", util::pid().to_string());
 

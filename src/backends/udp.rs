@@ -40,10 +40,8 @@ impl UdpBackend {
                     .context(Error::BackendCreationFailed)
             })?
             .nth(0)
-            .ok_or(
-                format_err!("Invalid destination server address",)
-                    .context(Error::BackendCreationFailed),
-            )?;
+            .ok_or_else(|| format_err!("Invalid destination server address",)
+                    .context(Error::BackendCreationFailed))?;
 
         // Create an appropiate local socket for the given destination
         let local = match destination_addr {

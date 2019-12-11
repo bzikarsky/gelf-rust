@@ -28,8 +28,8 @@ pub enum ChunkSize {
 
 impl ChunkSize {
     /// Return the size associated with the chunk-size
-    pub fn size(&self) -> u16 {
-        match *self {
+    pub fn size(self) -> u16 {
+        match self {
             ChunkSize::LAN => CHUNK_SIZE_LAN,
             ChunkSize::WAN => CHUNK_SIZE_WAN,
             ChunkSize::Custom(size) => size,
@@ -75,7 +75,7 @@ impl ChunkedMessage {
         })
     }
 
-    /// Return the byte-length of the chunked message inclduing all overhead
+    /// Return the byte-length of the chunked message including all overhead
     pub fn len(&self) -> u64 {
         if self.num_chunks > 1 {
             self.payload.len() as u64 + self.num_chunks as u64 * CHUNK_OVERHEAD as u64

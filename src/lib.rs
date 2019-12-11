@@ -97,7 +97,7 @@
 extern crate chrono;
 extern crate hostname;
 extern crate libc;
-extern crate libflate;
+extern crate libdeflater;
 extern crate rand;
 extern crate serde;
 
@@ -109,6 +109,7 @@ extern crate log;
 
 #[macro_use]
 extern crate failure;
+extern crate bytes;
 
 mod backends;
 mod errors;
@@ -121,4 +122,4 @@ pub use backends::{Backend, NullBackend, TcpBackend, UdpBackend};
 pub use errors::{Error, Result};
 pub use level::Level;
 pub use logger::Logger;
-pub use message::{ChunkSize, Message, MessageCompression};
+pub use message::{ChunkSize, Message, MessageCompression, WireMessage};

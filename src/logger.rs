@@ -32,11 +32,9 @@ impl Logger {
     pub fn new(backend: Box<dyn Backend>) -> Result<Self> {
         hostname::get_hostname()
             .map(|hostname| Logger::new_with_hostname(backend, &hostname))
-            .ok_or(
-                format_err!("Failed to determine local hostname")
+            .ok_or_else(|| format_err!("Failed to determine local hostname")
                     .context(Error::LoggerCreateFailed)
-                    .into(),
-            )
+                    .into())
     }
 
     /// Construct a new `Logger` instance with predetermined hostname
