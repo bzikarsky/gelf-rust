@@ -49,7 +49,7 @@ fn main() {
     options.populate(::std::env::args());
 
     // Create a UDP backend for given host and chunk_size
-    let mut backend = UdpBackend::new_with_chunksize(options.gelf_host.as_str(), CHUNK_SIZE)
+    let mut backend = UdpBackend::new_with_chunksize(options.gelf_host.clone(), CHUNK_SIZE)
         .expect("Failed to create a UDP backend");
 
     // Configure compression (can be ommited, defaults to Gzip)

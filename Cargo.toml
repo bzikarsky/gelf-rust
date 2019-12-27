@@ -8,6 +8,7 @@ homepage = "https://github.com/bzikarsky/gelf-rust"
 documentation = "https://docs.rs/gelf/"
 keywords = ["gelf", "log", "graylog", "logging"]
 license = "MIT"
+edition = "2018"
 readme = "README.md"
 
 [dependencies]
@@ -21,6 +22,7 @@ serde = "^1.0.0"
 rand = "^0.7.2"
 libdeflater = "0.2.0"
 bytes = "0.4.12"
+async-trait = "0.1.22"
 
 [profile.release]
 opt-level = 3
