@@ -3,10 +3,10 @@ use serde;
 use serde::ser::SerializeMap;
 use serde_json;
 use std::collections::HashMap;
-
-use errors::{Error, Result};
-use logger::Logger;
-use message::{ChunkSize, ChunkedMessage, Message, MessageCompression};
+use crate::{Message, Logger, MessageCompression, ChunkSize};
+use crate::errors::Result;
+use crate::errors::Error;
+use crate::message::ChunkedMessage;
 
 /// WireMessage is the representation of a fully assembled GELF message
 ///
@@ -117,7 +117,7 @@ mod tests {
     use super::*;
 
     use chrono::{TimeZone, Utc};
-    use level::Level;
+    use crate::Level;
 
     #[test]
     fn wire_message_serialization() {

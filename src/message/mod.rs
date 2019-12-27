@@ -3,13 +3,12 @@ use std::borrow::Cow;
 use chrono::{DateTime, Utc};
 use log;
 
-use errors::{Error, Result};
-use level::Level;
-use util;
-
 pub use self::chunked_message::{ChunkSize, ChunkedMessage};
 pub use self::compression::MessageCompression;
 pub use self::wire_message::WireMessage;
+
+use crate::{Level, util, Error};
+use crate::errors::Result;
 
 mod chunked_message;
 mod compression;

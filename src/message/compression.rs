@@ -1,10 +1,10 @@
-
-use errors::{Error, Result};
-use message::WireMessage;
 use libdeflater::{CompressionLvl, Compressor};
 use std::iter;
 use std::collections::HashMap;
 use std::cell::RefCell;
+
+use crate::{WireMessage, Error};
+use crate::errors::Result;
 
 thread_local!(static COMPRESSORS: RefCell<DeflaterCompressor> = RefCell::new(DeflaterCompressor::new()));
 
@@ -110,9 +110,8 @@ impl DeflaterCompressor {
 #[cfg(test)]
 mod test {
     use super::*;
-    use ::{Message, Logger};
-    use NullBackend;
     use serde_json::Value;
+    use crate::{Logger, NullBackend, Message};
 
     #[test]
     fn test_compression_none() {

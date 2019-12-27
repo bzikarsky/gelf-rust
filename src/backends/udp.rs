@@ -99,19 +99,3 @@ impl<T: net::ToSocketAddrs + Send + Sync + Clone> Backend for UdpBackend<T> {
         Ok(())
     }
 }
-
-#[cfg(test)]
-mod test {
-    use UdpBackend;
-    use std::net::UdpSocket;
-
-    #[test]
-    fn some() {
-        let m = UdpSocket::bind("127.0.0.1:8080").unwrap();
-        let res = m.send_to(&[0,0,0,0], "127.0.152.63:8081");
-
-        let t = res.unwrap();
-        let asd = 12;
-    }
-
-}

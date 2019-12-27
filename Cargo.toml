@@ -22,7 +22,6 @@ serde = "^1.0.0"
 rand = "^0.7.2"
 libdeflater = "0.2.0"
 bytes = "0.4.12"
-async-trait = "0.1.22"
 
 [profile.release]
 opt-level = 3

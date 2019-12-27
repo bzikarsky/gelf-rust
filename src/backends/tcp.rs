@@ -4,9 +4,7 @@ use std::io::Write;
 use std::net;
 use std::sync;
 
-use backends::Backend;
-use errors::{Error, Result};
-use message::WireMessage;
+use crate::{Result, Error, Backend, WireMessage};
 
 /// TcpBackend is a simple GELF over TCP backend.
 ///

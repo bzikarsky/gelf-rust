@@ -1,6 +1,4 @@
-use backends::Backend;
-use errors::Result;
-use message::WireMessage;
+use crate::{Backend, WireMessage, Result};
 
 /// The `NullBackend` is a utility backend which discards all messages
 pub struct NullBackend;

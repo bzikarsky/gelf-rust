@@ -3,10 +3,8 @@ use std::collections::HashMap;
 use hostname;
 use log;
 use log::set_boxed_logger;
-
-use backends::Backend;
-use errors::{Error, Result};
-use message::{Message, WireMessage};
+use crate::{Backend, Error, Message, WireMessage};
+use crate::errors::Result;
 
 /// Logger for sending log-messages
 ///
