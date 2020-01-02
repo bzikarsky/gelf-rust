@@ -19,7 +19,7 @@ use log::{Level as LogLevel, LevelFilter as LogLevelFilter};
 /// | Informational (6) | Info (3)  |
 /// | Debug (7)         | Debug (4) |
 /// | Debug (7)         | Trace (5) |
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Level {
     Emergency = 0,
     Alert = 1,

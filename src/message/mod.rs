@@ -22,6 +22,7 @@ mod wire_message;
 ///
 /// A `Message` can also be constructed from a `log::LogRecord`. All
 /// available metadata is transferred over to the message object.
+#[derive(Clone, Debug, PartialEq)]
 pub struct Message<'a> {
     short_message: Cow<'a, str>,
     full_message: Option<Cow<'a, str>>,
