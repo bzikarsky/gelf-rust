@@ -1,4 +1,5 @@
 use log::{Level as LogLevel, LevelFilter as LogLevelFilter};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 /// GELF's representation of an error level
 ///
@@ -53,6 +54,23 @@ impl Level {
     }
 }
 
+impl<'de> Deserialize<'de> for Level {
+    fn deserialize<D>(deserializer: D) -> Result<Self, <D as Deserializer<'de>>::Error> where
+        D: Deserializer<'de> {
+        serde_json::Value::deserialize(deserializer)?
+            .as_i64()
+            .map(Level::from)
+            .ok_or_else(|| serde::de::Error::custom("Expected i64 for Log Level"))
+    }
+}
+
+impl Serialize for Level {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where S: Serializer {
+        serializer.serialize_i8(self.into())
+    }
+}
+
 impl Into<LogLevel> for Level {
     /// Allow for Into conversion to Rust's LogLevel
     fn into(self) -> LogLevel {
@@ -71,5 +89,27 @@ impl Into<LogLevelFilter> for Level {
     /// Allow for Into conversion from Rust's LogLevelFilter
     fn into(self) -> LogLevelFilter {
         self.to_rust().to_level_filter()
+    }
+}
+
+impl Into<i8> for &Level {
+    fn into(self) -> i8 {
+        *self as i8
+    }
+}
+
+impl From<i64> for Level {
+    fn from(value: i64) -> Self {
+        match value {
+            0 => Level::Emergency,
+            1 => Level::Alert,
+            2 => Level::Critical,
+            3 => Level::Error,
+            4 => Level::Warning,
+            5 => Level::Notice,
+            6 => Level::Informational,
+            7 => Level::Debug,
+            _ => Level::Informational
+        }
     }
 }

@@ -22,12 +22,13 @@ mod wire_message;
 ///
 /// A `Message` can also be constructed from a `log::LogRecord`. All
 /// available metadata is transferred over to the message object.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub struct Message<'a> {
     short_message: Cow<'a, str>,
     full_message: Option<Cow<'a, str>>,
     timestamp: Option<DateTime<Utc>>,
     level: Level,
+    #[serde(flatten)]
     metadata: HashMap<Cow<'a, str>, Cow<'a, str>>,
 }
 
@@ -187,4 +188,113 @@ impl<'a> From<&'a log::Record<'a>> for Message<'a> {
 
         msg
     }
+}
+
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use rand::{thread_rng, Rng};
+    use rand::distributions::{Alphanumeric, Uniform};
+    use serde_json::de::SliceRead;
+    use serde_json::StreamDeserializer;
+
+    fn random_message() -> Message<'static> {
+        let short_message: String = thread_rng()
+            .sample_iter(&Alphanumeric)
+            .take(100)
+            .collect();
+
+        let full_message: String = thread_rng()
+            .sample_iter(&Alphanumeric)
+            .take(200)
+            .collect();
+
+        let mut rng = thread_rng();
+
+        let int = rng.sample::<i64, _>(Uniform::new_inclusive(0, 7));
+
+        let mut message = Message::new(short_message);
+
+        message.set_full_message(full_message);
+        message.set_level(Level::from(int));
+
+        random_metadata().into_iter().for_each(|pair| {
+            message.set_metadata(pair.0, pair.1).unwrap();
+        });
+
+        message
+    }
+
+    fn random_metadata() -> HashMap<String, String> {
+        let mut rng = thread_rng();
+
+        let int = rng.sample::<usize, _>(Uniform::new_inclusive(5, 30));
+
+        std::iter::repeat_with(|| {
+            let value: String = thread_rng()
+                .sample_iter(&Alphanumeric)
+                .take(200)
+                .collect();
+
+            let key: String = thread_rng()
+                .sample_iter(&Alphanumeric)
+                .take(10)
+                .collect();
+
+            (key, value)
+        }).take(int)
+            .fold(HashMap::new(), |mut acc, m| {
+
+                acc.insert(m.0, m.1);
+
+                acc
+        })
+    }
+
+    fn random_messages(amount: usize) -> impl Iterator<Item=Message<'static>> {
+        std::iter::repeat_with(random_message).take(amount)
+    }
+
+    #[test]
+    fn test_deserialize_valid_json() {
+        let message = random_message();
+
+        let input = serde_json::to_string(&message).unwrap();
+
+        let actual_message: Message = serde_json::from_str(input.as_str()).expect("No erro parsing");
+
+        assert_eq!(actual_message.short_message, message.short_message);
+        assert_eq!(actual_message.full_message, message.full_message);
+        assert_eq!(actual_message.timestamp, message.timestamp);
+        assert_eq!(actual_message.metadata, message.metadata);
+        assert_eq!(actual_message.level, message.level);
+    }
+
+    #[test]
+    fn test_deserialize_multiple_valid_jsons() {
+        let messages = random_messages(10).collect::<Vec<Message>>();
+
+        let input = messages.clone().into_iter()
+            .map(|m| serde_json::to_string(&m).unwrap())
+            .fold(String::new(), |mut acc, v| {
+            acc.push_str(v.as_str());
+
+            acc
+        });
+
+        let read = SliceRead::new(input.as_bytes());
+
+        let mut stream: StreamDeserializer<SliceRead, Message> = serde_json::StreamDeserializer::new(read);
+
+        let mut actual_parsed: Vec<Message> = vec![];
+
+        while let Some(m) = stream.next() {
+            actual_parsed.push( m.unwrap());
+        }
+
+        assert_eq!(actual_parsed, messages);
+        assert_eq!(stream.byte_offset(), input.len());
+    }
+
 }
