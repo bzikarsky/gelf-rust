@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::borrow::Cow;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Utc, TimeZone, NaiveDateTime};
 use log;
 
 pub use self::chunked_message::{ChunkSize, ChunkedMessage};
@@ -9,6 +9,11 @@ pub use self::wire_message::WireMessage;
 
 use crate::{Level, util, Error};
 use crate::errors::Result;
+use serde::de;
+use serde::de::Deserialize;
+use serde_with::with_prefix;
+use serde_with::chrono::datetime_utc_ts_seconds_from_any;
+use crate::level::Level::Debug;
 
 mod chunked_message;
 mod compression;
@@ -26,9 +31,10 @@ mod wire_message;
 pub struct Message<'a> {
     short_message: Cow<'a, str>,
     full_message: Option<Cow<'a, str>>,
+    #[serde(deserialize_with = "parse_unix_seconds")]
     timestamp: Option<DateTime<Utc>>,
     level: Level,
-    #[serde(flatten)]
+    #[serde(flatten, with = "prefix_metadata")]
     metadata: HashMap<Cow<'a, str>, Cow<'a, str>>,
 }
 
@@ -190,6 +196,30 @@ impl<'a> From<&'a log::Record<'a>> for Message<'a> {
     }
 }
 
+with_prefix!(prefix_metadata "_");
+
+fn parse_unix_seconds<'de, D>(d: D) -> std::result::Result<Option<DateTime<Utc>>, D::Error>
+    where D: de::Deserializer<'de>
+{
+    let value: Option<f64> = Deserialize::deserialize(d)?;
+
+    let value = match value {
+        Some(v) => v,
+        None => return Ok(None)
+    };
+
+    let seconds = value.trunc() as i64;
+    let nsecs = (value.fract() * 1_000_000_000_f64).abs() as u32;
+    let ndt = NaiveDateTime::from_timestamp_opt(seconds, nsecs);
+    if let Some(ndt) = ndt {
+        Ok(Some(DateTime::<Utc>::from_utc(ndt, Utc)))
+    } else {
+        Err(Error::custom(format!(
+            "Invalid or out of range value '{}' for DateTime",
+            value
+        )))
+    }
+}
 
 #[cfg(test)]
 mod test {
@@ -295,6 +325,27 @@ mod test {
 
         assert_eq!(actual_parsed, messages);
         assert_eq!(stream.byte_offset(), input.len());
+    }
+
+    #[test]
+    fn test_parse_timestamp_json() {
+        let raw_message = r#"
+        {"version": "1.1",
+        "short_message": "Removing {logging-channel-adapter:_org.springframework.integration.errorLogger} as a subscriber to the 'errorChannel' channel",
+        "full_message": "Removing {logging-channel-adapter:_org.springframework.integration.errorLogger} as a subscriber to the 'errorChannel' channel\n",
+        "timestamp": 1578669969.107,
+        "level": 6,
+        "_thread_name": "Thread-11",
+        "_logger_name": "org.springframework.integration.endpoint.EventDrivenConsumer"}
+        "#;
+
+        let actual_message: Message = serde_json::from_str(raw_message).expect("Parse with success");
+
+        assert_eq!(actual_message.timestamp().as_ref().expect("Timestamp"), &Utc.timestamp(1578669969, 0));
+        assert_eq!(actual_message.full_message().as_ref().expect("Full Message"), "Removing {logging-channel-adapter:_org.springframework.integration.errorLogger} as a subscriber to the 'errorChannel' channel\n");
+        assert_eq!(actual_message.level(), Level::Informational);
+        assert_eq!(actual_message.metadata("thread_name").expect("thread name"), "Thread-11");
+        assert_eq!(actual_message.metadata("logger_name").expect("logger name"), "org.springframework.integration.endpoint.EventDrivenConsumer");
     }
 
 }

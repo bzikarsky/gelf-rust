@@ -58,7 +58,7 @@ impl<'de> Deserialize<'de> for Level {
     fn deserialize<D>(deserializer: D) -> Result<Self, <D as Deserializer<'de>>::Error> where
         D: Deserializer<'de> {
         serde_json::Value::deserialize(deserializer)?
-            .as_i64()
+            .as_f64()
             .map(Level::from)
             .ok_or_else(|| serde::de::Error::custom("Expected i64 for Log Level"))
     }
@@ -111,5 +111,11 @@ impl From<i64> for Level {
             7 => Level::Debug,
             _ => Level::Informational
         }
+    }
+}
+
+impl From<f64> for Level {
+    fn from(value: f64) -> Self {
+        Level::from(value as i64)
     }
 }
