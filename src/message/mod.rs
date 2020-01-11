@@ -12,8 +12,6 @@ use crate::errors::Result;
 use serde::de;
 use serde::de::Deserialize;
 use serde_with::with_prefix;
-use serde_with::chrono::datetime_utc_ts_seconds_from_any;
-use crate::level::Level::Debug;
 
 mod chunked_message;
 mod compression;
@@ -38,7 +36,7 @@ pub struct Message<'a> {
     metadata: HashMap<Cow<'a, str>, Cow<'a, str>>,
 }
 
-impl<'a > Message<'a> {
+impl<'a> Message<'a> {
     /// Construct a new log message.
     ///
     /// All fields will use their defaults. This means usually Option::None.
@@ -47,8 +45,8 @@ impl<'a > Message<'a> {
     pub fn new<S>(
         short_message: S,
     ) -> Self
-    where
-        S: Into<Cow<'a, str>> + AsRef<str>
+        where
+            S: Into<Cow<'a, str>> + AsRef<str>
     {
         Self::new_with_level(short_message, Level::Alert)
     }
@@ -58,10 +56,10 @@ impl<'a > Message<'a> {
     /// All fields will use their defaults. This means usually Option::None.
     pub fn new_with_level<S>(
         short_message: S,
-        level: Level
+        level: Level,
     ) -> Self
-    where
-        S: Into<Cow<'a, str>> + AsRef<str>
+        where
+            S: Into<Cow<'a, str>> + AsRef<str>
     {
         Message {
             short_message: short_message.into(),
@@ -154,11 +152,11 @@ impl<'a > Message<'a> {
     pub fn set_metadata<S, T>(
         &mut self,
         key: S,
-        value: T
+        value: T,
     ) -> Result<&mut Self>
-    where
-        S: Into<Cow<'a, str>> + AsRef<str>,
-        T: Into<Cow<'a, str>> + AsRef<str>,
+        where
+            S: Into<Cow<'a, str>> + AsRef<str>,
+            T: Into<Cow<'a, str>> + AsRef<str>,
     {
         let key = key.into();
 
@@ -180,7 +178,7 @@ impl<'a> From<&'a log::Record<'a>> for Message<'a> {
 
         let mut msg = Message::new_with_level(
             short_message,
-            record.level().into()
+            record.level().into(),
         );
 
         msg.set_timestamp(Utc::now());
@@ -214,7 +212,7 @@ fn parse_unix_seconds<'de, D>(d: D) -> std::result::Result<Option<DateTime<Utc>>
     if let Some(ndt) = ndt {
         Ok(Some(DateTime::<Utc>::from_utc(ndt, Utc)))
     } else {
-        Err(Error::custom(format!(
+        Err(de::Error::custom(format!(
             "Invalid or out of range value '{}' for DateTime",
             value
         )))
@@ -228,6 +226,7 @@ mod test {
     use rand::distributions::{Alphanumeric, Uniform};
     use serde_json::de::SliceRead;
     use serde_json::StreamDeserializer;
+    use chrono::Timelike;
 
     fn random_message() -> Message<'static> {
         let short_message: String = thread_rng()
@@ -275,11 +274,10 @@ mod test {
             (key, value)
         }).take(int)
             .fold(HashMap::new(), |mut acc, m| {
-
                 acc.insert(m.0, m.1);
 
                 acc
-        })
+            })
     }
 
     fn random_messages(amount: usize) -> impl Iterator<Item=Message<'static>> {
@@ -308,10 +306,10 @@ mod test {
         let input = messages.clone().into_iter()
             .map(|m| serde_json::to_string(&m).unwrap())
             .fold(String::new(), |mut acc, v| {
-            acc.push_str(v.as_str());
+                acc.push_str(v.as_str());
 
-            acc
-        });
+                acc
+            });
 
         let read = SliceRead::new(input.as_bytes());
 
@@ -320,7 +318,7 @@ mod test {
         let mut actual_parsed: Vec<Message> = vec![];
 
         while let Some(m) = stream.next() {
-            actual_parsed.push( m.unwrap());
+            actual_parsed.push(m.unwrap());
         }
 
         assert_eq!(actual_parsed, messages);
@@ -333,7 +331,7 @@ mod test {
         {"version": "1.1",
         "short_message": "Removing {logging-channel-adapter:_org.springframework.integration.errorLogger} as a subscriber to the 'errorChannel' channel",
         "full_message": "Removing {logging-channel-adapter:_org.springframework.integration.errorLogger} as a subscriber to the 'errorChannel' channel\n",
-        "timestamp": 1578669969.107,
+        "timestamp": 1578669969.108120000,
         "level": 6,
         "_thread_name": "Thread-11",
         "_logger_name": "org.springframework.integration.endpoint.EventDrivenConsumer"}
@@ -341,8 +339,12 @@ mod test {
 
         let actual_message: Message = serde_json::from_str(raw_message).expect("Parse with success");
 
-        assert_eq!(actual_message.timestamp().as_ref().expect("Timestamp"), &Utc.timestamp(1578669969, 0));
+        let actual_timestamp = actual_message.timestamp().as_ref().expect("Timestamp");
+        assert_eq!(actual_timestamp.timestamp(), 1_578_669_969);
+        assert!(actual_timestamp.nanosecond() < 108_120_000);
+
         assert_eq!(actual_message.full_message().as_ref().expect("Full Message"), "Removing {logging-channel-adapter:_org.springframework.integration.errorLogger} as a subscriber to the 'errorChannel' channel\n");
+
         assert_eq!(actual_message.level(), Level::Informational);
         assert_eq!(actual_message.metadata("thread_name").expect("thread name"), "Thread-11");
         assert_eq!(actual_message.metadata("logger_name").expect("logger name"), "org.springframework.integration.endpoint.EventDrivenConsumer");
