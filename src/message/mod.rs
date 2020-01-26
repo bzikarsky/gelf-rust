@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::borrow::Cow;
-use chrono::{DateTime, Utc, TimeZone, NaiveDateTime};
+use chrono::{DateTime, Utc, NaiveDateTime};
 use log;
 
 pub use self::chunked_message::{ChunkSize, ChunkedMessage};
